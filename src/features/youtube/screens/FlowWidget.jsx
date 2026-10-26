@@ -8,6 +8,7 @@ import { PersonaSelection } from "../components/PersonaSelection";
 import { VideoSelection } from "../components/VideoSelection";
 import { ReplySection } from "../components/ReplySection";
 import { StatsScreen } from "../components/StatsScreen";
+import { clearStoredAutomation } from "../automationStorage";
 import { logoutUser } from "../api";
 
 // Single source of truth: step order, nav label, and the component to render
@@ -113,6 +114,7 @@ export const FlowWidget = () => {
   };
 
   const clearFlowState = () => {
+    clearStoredAutomation(channel?.id, video?.id);
     setChannel(null);
     setProfile(null);
     setVideo(null);
@@ -146,6 +148,7 @@ export const FlowWidget = () => {
       }
     }
     // Setting these to null also clears their localStorage entries (useStoredState does that)
+    clearStoredAutomation(channel?.id, video?.id);
     setChannel(null);
     setProfile(null);
     setVideo(null);
@@ -162,7 +165,13 @@ export const FlowWidget = () => {
       {/* Header: brand, module label, step navigation, demo + exit */}
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center gap-4 px-6 py-3">
-          <img src="/leadhive-logo.png" alt="LeadHive AI" className="h-8 w-auto shrink-0" />
+          <Link
+            to="/"
+            aria-label="LeadHive AI home"
+            className="shrink-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2"
+          >
+            <img src="/leadhive-logo.png" alt="LeadHive AI" className="h-8 w-auto" />
+          </Link>
           <span className="hidden h-6 w-px bg-gray-300 sm:block" aria-hidden="true" />
           <span className="hidden whitespace-nowrap text-sm font-semibold text-gray-700 md:block">
             YouTube Intelligence
@@ -222,19 +231,24 @@ export const FlowWidget = () => {
           </p>
         )}
 
-        {/* Current step (screens ignore props they don't use) */}
-        <div>
-          <ActiveStep
-            key={sessionKey}
-            channel={channel}
-            onSelectChannel={selectChannel}
-            onDisconnected={clearFlowState}
-            onAccountDeleted={accountDeleted}
-            profile={profile}
-            onProfileSaved={setProfile}
-            video={video}
-            onVideoSaved={setVideo}
-          />
+        {/* Keep automation mounted across step navigation; render other steps on demand. */}
+        {currentStep !== 3 && (
+          <div>
+            <ActiveStep
+              key={sessionKey}
+              channel={channel}
+              onSelectChannel={selectChannel}
+              onDisconnected={clearFlowState}
+              onAccountDeleted={accountDeleted}
+              profile={profile}
+              onProfileSaved={setProfile}
+              video={video}
+              onVideoSaved={setVideo}
+            />
+          </div>
+        )}
+        <div hidden={currentStep !== 3}>
+          <ReplySection channel={channel} video={video} />
         </div>
 
         {/* Navigation */}
