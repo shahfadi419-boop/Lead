@@ -30,6 +30,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tailwindcss()],
+    envPrefix: [ 'VITE_RECAPTCHA_SITE_KEY' ],
 
     resolve: {
       alias: {

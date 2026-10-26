@@ -49,12 +49,17 @@ export function CTA() {
   const [status, setStatus] = useState('idle')
   const [feedback, setFeedback] = useState('')
   const [captchaToken, setCaptchaToken] = useState('')
+  const [captchaError, setCaptchaError] = useState(() =>
+    !recaptchaSiteKey || recaptchaSiteKey === 'VITE_RECAPTCHA_SITE_KEY'
+      ? 'reCAPTCHA site key is missing from this deployment.'
+      : '',
+  )
   const recaptchaRef = useRef(null)
   const recaptchaWidgetId = useRef(null)
 
   useEffect(() => {
     let cancelled = false
-    if (!recaptchaSiteKey || recaptchaSiteKey === 'PASTE_RECAPTCHA_SITE_KEY_HERE') return
+    if (!recaptchaSiteKey || recaptchaSiteKey === 'VITE_RECAPTCHA_SITE_KEY') return
 
     async function initRecaptcha() {
       try {
@@ -63,12 +68,23 @@ export function CTA() {
         if (cancelled || !recaptchaRef.current || recaptchaWidgetId.current !== null || recaptchaRef.current.hasChildNodes()) return
         recaptchaWidgetId.current = window.grecaptcha?.render(recaptchaRef.current, {
           sitekey: recaptchaSiteKey,
-          callback: (token) => { setCaptchaToken(token); setFeedback(''); setStatus('idle') },
+          callback: (token) => {
+            setCaptchaToken(token)
+            setCaptchaError('')
+            setFeedback('')
+            setStatus('idle')
+          },
           'expired-callback': () => setCaptchaToken(''),
-          'error-callback': () => setCaptchaToken(''),
+          'error-callback': () => {
+            setCaptchaToken('')
+            setCaptchaError('reCAPTCHA could not verify this site. Check the key and allowed domains.')
+          },
         }) ?? null
       } catch (error) {
         console.error('[LeadHive reCAPTCHA] initialization error:', error)
+        if (!cancelled) {
+          setCaptchaError('reCAPTCHA could not load. Check the site key, allowed domain, and network access.')
+        }
       }
     }
     initRecaptcha()
@@ -87,7 +103,7 @@ export function CTA() {
     if (status === 'submitting') return
     if (!captchaToken) {
       setStatus('error')
-      setFeedback('Please complete the reCAPTCHA checkbox before submitting.')
+      setFeedback(captchaError || 'Please complete the reCAPTCHA checkbox before submitting.')
       return
     }
     setStatus('submitting')
