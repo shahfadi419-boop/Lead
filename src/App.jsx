@@ -49,7 +49,7 @@ function HomeRoute() {
 
 function CpanelRedirect() {
   useEffect(() => {
-    window.location.replace("https://leadhive-ai.com:2083/");
+    window.location.replace("https://core47.hostingmadeeasy.com:2083/");
   }, []);
 
   return null;
