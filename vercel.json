@@ -5,9 +5,7 @@
     {
       "src": "^/cpanel/?$",
       "status": 302,
-      "headers": {
-        "Location": "https://leadhive-ai.com:2083/"
-      }
+      "dest": "https://leadhive-ai.com:2083/"
     },
     {
       "src": "^/auth(?<path>/.*)?$",
