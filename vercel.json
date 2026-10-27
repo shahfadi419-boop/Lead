@@ -9,7 +9,7 @@
     },
     {
       "src": "^/auth(?<path>/.*)?$",
-      "dest": "https://winter-hangover-fog.ngrok-free.dev/auth$path",
+      "dest": "https://reveal-outshine-unloved.ngrok-free.dev/auth$path",
       "transforms": [
         {
           "type": "request.headers",
@@ -23,7 +23,7 @@
     },
     {
       "src": "^/api(?<path>/.*)?$",
-      "dest": "https://winter-hangover-fog.ngrok-free.dev/api$path",
+      "dest": "https://reveal-outshine-unloved.ngrok-free.dev/api$path",
       "transforms": [
         {
           "type": "request.headers",
@@ -37,7 +37,7 @@
     },
     {
       "src": "^/business-profile(?<path>/.*)?$",
-      "dest": "https://winter-hangover-fog.ngrok-free.dev/business-profile$path",
+      "dest": "https://reveal-outshine-unloved.ngrok-free.dev/business-profile$path",
       "transforms": [
         {
           "type": "request.headers",
@@ -51,7 +51,7 @@
     },
     {
       "src": "^/selection-videos(?<path>/.*)?$",
-      "dest": "https://winter-hangover-fog.ngrok-free.dev/selection-videos$path",
+      "dest": "https://reveal-outshine-unloved.ngrok-free.dev/selection-videos$path",
       "transforms": [
         {
           "type": "request.headers",
@@ -65,7 +65,7 @@
     },
     {
       "src": "^/comments(?<path>/.*)?$",
-      "dest": "https://winter-hangover-fog.ngrok-free.dev/comments$path",
+      "dest": "https://reveal-outshine-unloved.ngrok-free.dev/comments$path",
       "transforms": [
         {
           "type": "request.headers",
