@@ -127,7 +127,7 @@ export function StatsScreen({ channel, video }) {
     {
       label: 'Comments',
       value: analytics.youtube_comment_count,
-      description: 'Comments reported by YouTube',
+      description: 'Includes YouTube comments and AI-posted replies',
       Icon: MessageSquare,
       iconStyle: 'bg-violet-50 text-violet-600',
     },

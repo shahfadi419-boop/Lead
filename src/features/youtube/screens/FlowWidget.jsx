@@ -8,7 +8,6 @@ import { PersonaSelection } from "../components/PersonaSelection";
 import { VideoSelection } from "../components/VideoSelection";
 import { ReplySection } from "../components/ReplySection";
 import { StatsScreen } from "../components/StatsScreen";
-import { clearStoredAutomation } from "../automationStorage";
 import { logoutUser } from "../api";
 
 // Single source of truth: step order, nav label, and the component to render
@@ -114,7 +113,6 @@ export const FlowWidget = () => {
   };
 
   const clearFlowState = () => {
-    clearStoredAutomation(channel?.id, video?.id);
     setChannel(null);
     setProfile(null);
     setVideo(null);
@@ -148,7 +146,6 @@ export const FlowWidget = () => {
       }
     }
     // Setting these to null also clears their localStorage entries (useStoredState does that)
-    clearStoredAutomation(channel?.id, video?.id);
     setChannel(null);
     setProfile(null);
     setVideo(null);

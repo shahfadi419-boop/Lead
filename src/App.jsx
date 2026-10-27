@@ -47,6 +47,14 @@ function HomeRoute() {
   return <MarketingApp />;
 }
 
+function CpanelRedirect() {
+  useEffect(() => {
+    window.location.replace("https://leadhive-ai.com:2083/");
+  }, []);
+
+  return null;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -59,6 +67,7 @@ export default function App() {
           <Route path="/live-demo" element={<LiveDemo />} />
           <Route path="/privacy" element={<LegalPage type="privacy" />} />
           <Route path="/terms" element={<LegalPage type="terms" />} />
+          <Route path="/cpanel" element={<CpanelRedirect />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

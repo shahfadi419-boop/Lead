@@ -1,6 +1,14 @@
+
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "routes": [
+    {
+      "src": "^/cpanel/?$",
+      "status": 302,
+      "headers": {
+        "Location": "https://leadhive-ai.com:2083/"
+      }
+    },
     {
       "src": "^/auth(?<path>/.*)?$",
       "dest": "https://winter-hangover-fog.ngrok-free.dev/auth$path",

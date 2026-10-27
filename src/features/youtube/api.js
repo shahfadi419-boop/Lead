@@ -117,6 +117,18 @@ export const getAuthMe = (options = {}) =>
 export const getAuthChannels = (options = {}) =>
   youtubeRequest('/auth/channels', { timeoutMs: AUTH_TIMEOUT_MS, ...options })
 
+// GET /auth/comment-monitoring: restore the account's automatic comment monitoring preference
+export const getCommentMonitoring = (options = {}) =>
+  youtubeRequest('/auth/comment-monitoring', options)
+
+// PUT /auth/comment-monitoring: save the account's automatic comment monitoring preference
+export const setCommentMonitoring = (enabled, options = {}) =>
+  youtubeRequest('/auth/comment-monitoring', {
+    method: 'PUT',
+    body: { enabled },
+    ...options,
+  })
+
 // POST /auth/logout: clears the JWT cookie
 export const logoutUser = () => youtubeRequest('/auth/logout', { method: 'POST' })
 
