@@ -2,7 +2,7 @@
 // The current step lives in the URL (/flow?step=2) so refresh and the browser Back button work.
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import { ArrowUpRight, Play } from "lucide-react";
+import { ArrowUpRight, Play, Sparkles } from "lucide-react";
 import { ChannelSelection } from "../components/ChannelSelection";
 import { PersonaSelection } from "../components/PersonaSelection";
 import { VideoSelection } from "../components/VideoSelection";
@@ -207,6 +207,14 @@ export const FlowWidget = () => {
             <Play size={14} className="fill-current" aria-hidden="true" />
             <span className="hidden sm:inline">Interactive Demo</span>
             <span className="sm:hidden">Demo</span>
+          </Link>
+          <Link
+            to="/interactive-demo-2"
+            className="lh-primary-action inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium"
+          >
+            <Sparkles size={14} aria-hidden="true" />
+            <span className="hidden sm:inline">Interactive Demo 2</span>
+            <span className="sm:hidden">Demo 2</span>
           </Link>
 
           <button

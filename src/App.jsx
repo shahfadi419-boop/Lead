@@ -8,6 +8,11 @@ import { FlowLoader } from "./features/youtube/components/FlowLoader";
 
 const AUTH_RETURN_KEY = "leadhive.youtube.auth-return";
 
+const InteractiveDemo2 = lazy(() =>
+  import("./features/youtube/components/InteractiveDemo2").then((m) => ({
+    default: m.InteractiveDemo2,
+  })),
+);
 const LegalPage = lazy(() =>
   import("@/features/legal/LegalPage").then((m) => ({ default: m.LegalPage })),
 );
@@ -65,6 +70,7 @@ export default function App() {
           <Route path="/test-demo" element={<Navigate to="/flow?step=1" replace />} />
           <Route path="/flow" element={<FlowWidget />} />
           <Route path="/live-demo" element={<LiveDemo />} />
+          <Route path="/interactive-demo-2" element={<InteractiveDemo2 />} />
           <Route path="/privacy" element={<LegalPage type="privacy" />} />
           <Route path="/terms" element={<LegalPage type="terms" />} />
           <Route path="/cpanel" element={<CpanelRedirect />} />

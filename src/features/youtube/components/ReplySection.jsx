@@ -20,7 +20,7 @@ import {
 import { useYoutubeResource } from '../hooks'
 
 const enc = encodeURIComponent
-const COMMENTS_POLL_INTERVAL_MS = 10_000
+const COMMENTS_POLL_INTERVAL_MS = 5 * 60 * 1_000
 
 // The comments response shape isn't in the OpenAPI spec, so accept the likely variations
 function toComment(raw, channelId) {
