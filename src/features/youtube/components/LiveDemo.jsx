@@ -17,6 +17,17 @@ const PERSONA_FIELDS = [
   ['reply_rules', 'Reply rules'],
 ]
 
+const DEMO_VIDEO_ID = 'BIek57Kj3ag'
+const DEMO_VIDEO_TITLE = 'What and How to Use | NourDoc'
+const DEMO_VIDEO_DESCRIPTION = 'A walkthrough introducing NourDoc and explaining how to use the platform.'
+const DEMO_COMMENTS = [
+  { author: 'Jamie', text: "I'm new to Nourdoc. Give me an introduction?" },
+  { author: 'Morgan', text: 'What are the benefits of using Nourdoc in my practice?' },
+  { author: 'Taylor', text: 'How does Nourdoc ensure data privacy and security?' },
+  { author: 'Riley', text: 'Is it real that Nourdoc makes the life of a doctor easy?' },
+  { author: 'Casey', text: 'Can I use Nourdoc for our practice?' },
+]
+
 export function LiveDemo() {
   const [refresh, setRefresh] = useState(0)
   const [playing, setPlaying] = useState(false)
@@ -27,18 +38,16 @@ export function LiveDemo() {
 
   const { data, error, loading } = useYoutubeResource('/demo/video', refresh)
 
-  const video = data?.video ?? {}
   const persona = data?.persona ?? {}
-  const sampleComments = data?.comments ?? []
+  const sampleComments = DEMO_COMMENTS
 
-  // "id" is an internal label; the YouTube id is embed_video_id (always exactly 11 characters)
-  const embedId = video.embed_video_id || ''
+  const embedId = DEMO_VIDEO_ID
   const validVideoId = /^[A-Za-z0-9_-]{11}$/.test(embedId)
-  const title = video.title || 'Demo video'
-  const brandName = persona.business_name || 'LeadHive Demo'
+  const title = DEMO_VIDEO_TITLE
+  const brandName = 'NourDoc'
   const personaRows = PERSONA_FIELDS.filter(([key]) => persona[key])
 
-  // Suggestion chips come from the backend's sample comments, so they always fit the video
+  // Suggestion chips use the same fixed comments shown beside the demo video.
   const suggestions = sampleComments.slice(0, 3).map(comment => comment.text).filter(Boolean)
 
   const updateComment = (id, patch) =>
@@ -166,9 +175,7 @@ export function LiveDemo() {
                     <div className="min-w-0">
                       <h2 className="text-sm font-bold text-gray-900">{title}</h2>
                       <p className="text-xs text-gray-500">{brandName}</p>
-                      {video.description && (
-                        <p className="mt-2 text-sm text-gray-600">{video.description}</p>
-                      )}
+                      <p className="mt-2 text-sm text-gray-600">{DEMO_VIDEO_DESCRIPTION}</p>
                     </div>
                   </div>
                 </div>
@@ -293,7 +300,7 @@ export function LiveDemo() {
   )
 }
 
-// One of the fixed example comments from the backend (no AI reply attached)
+// One of the fixed example comments for the demo (no AI reply attached)
 function SampleComment({ comment }) {
   const author = comment.author || 'Viewer'
   return (
