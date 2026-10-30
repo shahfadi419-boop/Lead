@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import {
   ArrowLeft,
+  ArrowDown,
   ArrowUpRight,
   BarChart3,
   Bot,
@@ -26,54 +27,41 @@ const MAX_COMMENT_LENGTH = 400
 const MAX_DESCRIPTION_LENGTH = 800
 
 const INITIAL_PERSONA = {
-  business_name: 'LeadHive AI',
-  brand_tone: 'Professional & Helpful',
-  services: 'AI-powered YouTube comment management and audience engagement.',
-  ai_rules: 'Be helpful, concise, and never make unsupported promises.',
+  business_name: '',
+  brand_tone: '',
+  services: '',
+  ai_rules: '',
 }
 
 const CHANNELS = [
-  { id: 'demo-channel-1', name: 'LeadHive AI', subscribers: 12400, views: 845200 },
-  { id: 'demo-channel-2', name: 'LeadHive Tutorials', subscribers: 5800, views: 231900 },
+  { id: 'nourdoc', name: 'NourDoc', subscribers: null, views: null },
 ]
 
 const VIDEO_TEMPLATES = [
-  { title: 'How AI Is Transforming Customer Engagement', views: 18400, likes: 920, comments: 38 },
-  { title: 'Build Better Conversations With LeadHive', views: 12600, likes: 684, comments: 24 },
-  { title: 'A Complete Guide to Smart Comment Replies', views: 8900, likes: 517, comments: 17 },
+  { title: 'What and How to Use | NourDoc', views: null, likes: null, comments: null },
 ]
 
 const DEMO_COMMENTS = [
-  { author: 'Maya R.', text: 'Can this help our team respond to comments faster?' },
-  { author: 'Jordan Lee', text: 'I like how the replies can match a brand voice.' },
-  { author: 'Chris M.', text: 'Does it work for a small channel too?' },
+  { author: 'Maya R.', text: 'Is this the walkthrough for getting started with NourDoc?' },
+  { author: 'Jordan Lee', text: 'Thanks for explaining how to use NourDoc.' },
+  { author: 'Chris M.', text: 'Where can I find more information about using the platform?' },
 ]
 
-const DEMO_PERSONA = {
-  business_name: 'LeadHive AI',
-  tone: 'Professional & Helpful',
-  offers: 'AI-powered comment management and audience engagement.',
-  reply_rules: 'Be helpful, concise, and never make unsupported promises.',
-}
-
 const DEMO_VIDEO = {
-  title: 'How AI Is Transforming Customer Engagement',
-  description: 'See how AI helps brands respond to YouTube comments in their own voice.',
-  embed_video_id: '',
+  title: 'What and How to Use | NourDoc',
+  description: 'A walkthrough introducing NourDoc and explaining how to use the platform.',
+  embed_video_id: 'BIek57Kj3ag',
 }
 
 function simulatedReply(comment) {
   const text = comment.toLowerCase()
-  if (text.includes('small') || text.includes('team')) {
-    return 'Absolutely! LeadHive is designed to help teams of different sizes save time and keep conversations moving.'
+  if (text.includes('medical') || text.includes('health') || text.includes('symptom') || text.includes('treatment')) {
+    return 'Thanks for your question. This demo cannot provide personal medical advice; please consult a qualified healthcare professional.'
   }
-  if (text.includes('brand') || text.includes('voice') || text.includes('tone')) {
-    return 'Thanks for noticing! You can configure a brand persona so suggested replies stay consistent with your voice.'
+  if (text.includes('how') || text.includes('start') || text.includes('use') || text.includes('information')) {
+    return "Thanks for watching! This video walks through how to use NourDoc. Please refer to NourDoc's official resources for more platform information."
   }
-  if (text.includes('price') || text.includes('cost')) {
-    return 'Thanks for asking! Please visit our website for the latest plan and pricing information.'
-  }
-  return 'Thanks for your comment! LeadHive helps you stay on top of conversations with replies tailored to your brand.'
+  return 'Thanks for watching the NourDoc walkthrough. We’re glad it was helpful!'
 }
 
 const FLOW_SECTIONS = [
@@ -85,15 +73,15 @@ const FLOW_SECTIONS = [
 ]
 
 const STEP_TASKS = [
-  'Select a sample channel to continue.',
-  'Edit any persona detail, then save your changes.',
-  'Choose a video and save your selection.',
-  'Turn automatic replies on and watch the AI reply to sample comments.',
-  'Refresh the sample analytics to finish the walkthrough.',
+  'In Connected channels, select NourDoc to continue.',
+  'Fill in each persona field, then select Save persona.',
+  'Select the NourDoc video, add an optional description, then select Save selection.',
+  'Switch on Automatic demo replies to see sample comments receive replies.',
+  'Select Refresh demo metrics to finish the walkthrough.',
 ]
 
 function MetricCard({ label, value, description, Icon, iconStyle }) {
-  const [displayValue, setDisplayValue] = useState(typeof value === 'number' ? 0 : value)
+  const [displayValue, setDisplayValue] = useState(typeof value === 'number' ? 0 : value ?? '—')
 
   useEffect(() => {
     if (typeof value !== 'number') return
@@ -115,7 +103,7 @@ function MetricCard({ label, value, description, Icon, iconStyle }) {
         <div>
           <p className="text-sm font-medium text-gray-500">{label}</p>
           <strong className="mt-2 block text-3xl font-bold tracking-tight text-gray-900">
-            {typeof value === 'number' ? displayValue.toLocaleString() : value}
+            {typeof value === 'number' ? displayValue.toLocaleString() : value ?? '—'}
           </strong>
         </div>
         <span className={`rounded-xl p-2.5 ${iconStyle}`} aria-hidden="true"><Icon size={19} /></span>
@@ -128,15 +116,13 @@ function MetricCard({ label, value, description, Icon, iconStyle }) {
 export function InteractiveDemo2() {
   const [activeStep, setActiveStep] = useState(0)
   const [completedSteps, setCompletedSteps] = useState([])
-  const [selectedChannelId, setSelectedChannelId] = useState(CHANNELS[0].id)
+  const [selectedChannelId, setSelectedChannelId] = useState(null)
   const [persona, setPersona] = useState(INITIAL_PERSONA)
-  const [personaSaved, setPersonaSaved] = useState(true)
+  const [personaSaved, setPersonaSaved] = useState(false)
   const [search, setSearch] = useState('')
   const [selectedVideo, setSelectedVideo] = useState(0)
   const [videoSelectionTouched, setVideoSelectionTouched] = useState(false)
-  const [videoDescription, setVideoDescription] = useState(
-    'See how AI helps brands respond to YouTube comments in their own voice.',
-  )
+  const [videoDescription, setVideoDescription] = useState('')
   const [videoSaved, setVideoSaved] = useState(false)
   const [draft, setDraft] = useState('')
   const [userComments, setUserComments] = useState([])
@@ -150,7 +136,6 @@ export function InteractiveDemo2() {
 
   const sampleVideo = DEMO_VIDEO
   const sampleComments = DEMO_COMMENTS
-  const samplePersona = DEMO_PERSONA
   const channel = CHANNELS.find(item => item.id === selectedChannelId) || CHANNELS[0]
   const embedId = sampleVideo.embed_video_id || ''
   const validVideoId = /^[A-Za-z0-9_-]{11}$/.test(embedId)
@@ -194,6 +179,7 @@ export function InteractiveDemo2() {
   function updatePersona(field, value) {
     setPersona(current => ({ ...current, [field]: value }))
     setPersonaSaved(false)
+    setCompletedSteps(current => current.filter(step => step !== 1))
   }
 
   function selectVideo(index) {
@@ -201,18 +187,19 @@ export function InteractiveDemo2() {
     setVideoSelectionTouched(true)
     if (index === 0) setVideoDescription(videos[0].description)
     setVideoSaved(false)
+    setCompletedSteps(current => current.filter(step => step !== 2))
   }
 
   function restartDemo() {
     setActiveStep(0)
     setCompletedSteps([])
-    setSelectedChannelId(CHANNELS[0].id)
+    setSelectedChannelId(null)
     setPersona(INITIAL_PERSONA)
-    setPersonaSaved(true)
+    setPersonaSaved(false)
     setSearch('')
     setSelectedVideo(0)
     setVideoSelectionTouched(false)
-    setVideoDescription('See how AI helps brands respond to YouTube comments in their own voice.')
+    setVideoDescription('')
     setVideoSaved(false)
     setDraft('')
     setUserComments([])
@@ -267,12 +254,12 @@ export function InteractiveDemo2() {
   }
 
   const channelStats = [
-    { label: 'Subscribers', value: channel.subscribers, description: 'Channel audience', Icon: Users, iconStyle: 'bg-blue-50 text-blue-600' },
-    { label: 'Channel views', value: channel.views, description: 'Lifetime channel views', Icon: BarChart3, iconStyle: 'bg-indigo-50 text-indigo-600' },
+    { label: 'Subscribers', value: channel.subscribers, description: 'Unavailable in this demo', Icon: Users, iconStyle: 'bg-blue-50 text-blue-600' },
+    { label: 'Channel views', value: channel.views, description: 'Unavailable in this demo', Icon: BarChart3, iconStyle: 'bg-indigo-50 text-indigo-600' },
   ]
   const videoStats = [
-    { label: 'Views', value: currentVideo.views, description: 'Views on this video', Icon: Eye, iconStyle: 'bg-cyan-50 text-cyan-700' },
-    { label: 'Likes', value: currentVideo.likes, description: 'Likes on this video', Icon: ThumbsUp, iconStyle: 'bg-rose-50 text-rose-600' },
+    { label: 'Views', value: currentVideo.views, description: 'Unavailable in this demo', Icon: Eye, iconStyle: 'bg-cyan-50 text-cyan-700' },
+    { label: 'Likes', value: currentVideo.likes, description: 'Unavailable in this demo', Icon: ThumbsUp, iconStyle: 'bg-rose-50 text-rose-600' },
     { label: 'Comments', value: currentVideo.comments, description: 'Sample comments and simulated replies', Icon: MessageSquare, iconStyle: 'bg-violet-50 text-violet-600' },
   ]
 
@@ -348,7 +335,7 @@ export function InteractiveDemo2() {
           stepComplete ? 'border-green-200 bg-green-50' : 'border-blue-200 bg-blue-50'
         }`}>
           <span className={`mt-0.5 ${stepComplete ? 'text-green-600' : 'text-blue-600'}`} aria-hidden="true">
-            {stepComplete ? <CheckCircle2 size={18} /> : <Sparkles size={18} />}
+            {stepComplete ? <CheckCircle2 size={18} /> : <ArrowDown size={20} className="animate-bounce" />}
           </span>
           <div className="min-w-0 flex-1">
             <p className={`text-sm font-semibold ${stepComplete ? 'text-green-800' : 'text-gray-900'}`}>
@@ -398,11 +385,11 @@ export function InteractiveDemo2() {
                         <div className="min-w-0 flex-1">
                           <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${selected ? 'bg-[#dff7fb] text-[#168ca1]' : 'bg-green-100 text-green-700'}`}>{selected ? 'Selected channel' : 'Connected'}</span>
                           <h4 className="mt-1 truncate font-semibold text-gray-900">{item.name}</h4>
-                          <p className="text-sm text-gray-500">{item.subscribers.toLocaleString()} subscribers · {item.views.toLocaleString()} views</p>
+                          <p className="text-sm text-gray-500">{item.subscribers?.toLocaleString() ?? '—'} subscribers · {item.views?.toLocaleString() ?? '—'} views</p>
                         </div>
                         {selected && <Check size={18} className="text-[#168ca1]" aria-label="Selected" />}
                         <button type="button" onClick={() => { setSelectedChannelId(item.id); completeStep(0) }} className={`inline-flex items-center gap-1 rounded-xl border px-3 py-2 text-sm font-semibold ${selected ? 'border-[#2cc1df] bg-[#e5f9fc] text-[#168ca1]' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}>
-                          {selected ? 'Use this channel' : 'Select channel'}
+                          {selected ? 'Use this channel' : 'Select channel'} <ArrowUpRight size={14} aria-hidden="true" />
                         </button>
                       </div>
                     </article>
@@ -414,7 +401,7 @@ export function InteractiveDemo2() {
                 <div className="mt-3 divide-y divide-slate-200 border-y border-slate-200">
                   <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
                     <div><p className="text-sm font-medium text-slate-800">YouTube connection</p><p className="mt-0.5 text-xs leading-5 text-slate-500">Sample connection for this interactive demo.</p></div>
-                    <button type="button" onClick={() => setSelectedChannelId(CHANNELS[0].id)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Reset demo channel</button>
+                    <button type="button" onClick={() => { setSelectedChannelId(null); setActiveStep(0); setCompletedSteps([]) }} className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Reset demo channel</button>
                   </div>
                   <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
                     <div><p className="text-sm font-medium text-slate-800">LeadHive account</p><p className="mt-0.5 text-xs leading-5 text-slate-500">Account actions are disabled in demo mode.</p></div>
@@ -439,24 +426,23 @@ export function InteractiveDemo2() {
                 <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">{channel.name}</span>
               </div>
               <div className="mt-5 space-y-5">
-                <label className="block"><span className="mb-1 block text-sm font-medium text-gray-700">Business / Brand Name</span><input maxLength={255} value={persona.business_name} onChange={event => updatePersona('business_name', event.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" /></label>
-                <label className="block"><span className="mb-1 block text-sm font-medium text-gray-700">Brand Tone</span><select value={persona.brand_tone} onChange={event => updatePersona('brand_tone', event.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500"><option>Professional &amp; Helpful</option><option>Casual &amp; Friendly</option><option>Witty &amp; Humorous</option></select></label>
-                <label className="block"><span className="mb-1 block text-sm font-medium text-gray-700">Core Services &amp; Offerings</span><textarea rows={4} maxLength={800} value={persona.services} onChange={event => updatePersona('services', event.target.value)} className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" /><small className="mt-1 block text-xs text-gray-500">{persona.services.length} / 800</small></label>
-                <label className="block"><span className="mb-1 block text-sm font-medium text-gray-700">Rules &amp; Response Directives</span><textarea rows={4} maxLength={300} value={persona.ai_rules} onChange={event => updatePersona('ai_rules', event.target.value)} className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" /><small className="mt-1 block text-xs text-gray-500">{persona.ai_rules.length} / 300</small></label>
+                <label className="block"><span className="mb-1 block text-sm font-medium text-gray-700">Business / Brand Name</span><input maxLength={255} value={persona.business_name} onChange={event => updatePersona('business_name', event.target.value)} placeholder="Enter your business name" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" /></label>
+                <label className="block"><span className="mb-1 block text-sm font-medium text-gray-700">Brand Tone</span><select value={persona.brand_tone} onChange={event => updatePersona('brand_tone', event.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500"><option value="" disabled>Select a brand tone</option><option>Professional &amp; Helpful</option><option>Casual &amp; Friendly</option><option>Witty &amp; Humorous</option></select></label>
+                <label className="block"><span className="mb-1 block text-sm font-medium text-gray-700">Core Services &amp; Offerings</span><textarea rows={4} maxLength={800} value={persona.services} onChange={event => updatePersona('services', event.target.value)} placeholder="Describe your business's core services and offerings" className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" /><small className="mt-1 block text-xs text-gray-500">{persona.services.length} / 800</small></label>
+                <label className="block"><span className="mb-1 block text-sm font-medium text-gray-700">Rules &amp; Response Directives</span><textarea rows={4} maxLength={300} value={persona.ai_rules} onChange={event => updatePersona('ai_rules', event.target.value)} placeholder="Add guidance and rules for how your AI should respond" className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" /><small className="mt-1 block text-xs text-gray-500">{persona.ai_rules.length} / 300</small></label>
               </div>
               <div className="mt-6 flex flex-wrap items-center gap-3">
-                <button type="button" onClick={() => { setPersonaSaved(true); completeStep(1) }} disabled={personaSaved || !persona.business_name.trim()} className="lh-primary-action rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50">{personaSaved ? 'Persona saved' : 'Save persona'}</button>
+                <button type="button" onClick={() => { setPersonaSaved(true); completeStep(1) }} disabled={personaSaved || !persona.business_name.trim() || !persona.brand_tone || !persona.services.trim() || !persona.ai_rules.trim()} className="lh-primary-action inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50">{personaSaved ? 'Persona saved' : 'Save persona'} {!personaSaved && <ArrowUpRight size={14} aria-hidden="true" />}</button>
                 {personaSaved && <span className="inline-flex items-center gap-1 text-sm text-green-700"><CheckCircle2 size={16} /> Persona saved. You can continue.</span>}
               </div>
             </div>
             <aside aria-label="AI persona live preview" className="h-fit rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="flex items-start justify-between"><div><span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Live Preview</span><h3 className="text-lg font-semibold text-gray-900">Persona snapshot</h3></div><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${personaSaved ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{personaSaved ? 'Saved' : 'Draft'}</span></div>
-              <div className="mt-5 flex flex-col items-center rounded-xl bg-gray-50 p-5 text-center"><span className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600"><Sparkles size={20} /></span><strong className="mt-3 text-gray-900">{persona.business_name || 'Your Brand'}</strong><small className="text-gray-500">{persona.brand_tone || 'Voice not selected'}</small></div>
+              <div className="mt-5 flex flex-col items-center rounded-xl bg-gray-50 p-5 text-center"><span className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600"><Sparkles size={20} /></span><strong className="mt-3 text-gray-900">{persona.business_name || 'Your Brand'}</strong><small className="text-gray-500">{persona.brand_tone || 'Select a brand tone'}</small></div>
               <dl className="mt-5 space-y-4 text-sm">
                 <div><dt className="font-medium text-gray-500">Channel</dt><dd className="text-gray-900">{channel.name}</dd></div>
-                <div><dt className="font-medium text-gray-500">Core Services</dt><dd className="break-words text-gray-900">{persona.services || 'Describe what LeadHive represents.'}</dd></div>
-                <div><dt className="font-medium text-gray-500">Directives</dt><dd className="break-words text-gray-900">{persona.ai_rules || 'No communication constraints specified.'}</dd></div>
-                {samplePersona.tone && <div><dt className="font-medium text-gray-500">Demo persona voice</dt><dd className="break-words text-gray-900">{samplePersona.tone}</dd></div>}
+                <div><dt className="font-medium text-gray-500">Core Services</dt><dd className="break-words text-gray-900">{persona.services || 'Your core services and offerings will appear here.'}</dd></div>
+                <div><dt className="font-medium text-gray-500">Directives</dt><dd className="break-words text-gray-900">{persona.ai_rules || 'Your response rules will appear here.'}</dd></div>
               </dl>
             </aside>
           </div>
@@ -497,10 +483,10 @@ export function InteractiveDemo2() {
                       {selected && <span className="absolute bottom-3 left-3 z-10 inline-flex items-center gap-1 rounded-full bg-[#2cc1df] px-2 py-0.5 text-xs font-medium text-[#07101d]"><Check size={13} /> Selected</span>}
                     </div>
                     <div className="space-y-3 p-4">
-                      <div><h3 className="font-semibold text-gray-900">{item.title}</h3><p className="mt-1 text-xs text-gray-500">{item.views.toLocaleString()} views · {item.likes.toLocaleString()} likes · {item.comments.toLocaleString()} comments</p></div>
+                      <div><h3 className="font-semibold text-gray-900">{item.title}</h3><p className="mt-1 text-xs text-gray-500">{item.views?.toLocaleString() ?? '—'} views · {item.likes?.toLocaleString() ?? '—'} likes · {item.comments?.toLocaleString() ?? '—'} comments</p></div>
                       <div onClick={event => event.stopPropagation()}>
                         <label htmlFor={`demo-video-description-${index}`} className="block text-sm font-medium text-gray-700">Video description <span className="font-normal text-gray-400">(optional)</span></label>
-                        <textarea id={`demo-video-description-${index}`} rows={3} maxLength={MAX_DESCRIPTION_LENGTH} value={description} disabled={!selected} onChange={event => { setVideoDescription(event.target.value); setVideoSaved(false) }} placeholder="Describe what this video is about..." className="mt-1 w-full resize-none rounded-lg border border-gray-300 p-2 text-sm outline-none focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-400" />
+                        <textarea id={`demo-video-description-${index}`} rows={3} maxLength={MAX_DESCRIPTION_LENGTH} value={description} disabled={!selected} onChange={event => { setVideoDescription(event.target.value); setVideoSelectionTouched(true); setVideoSaved(false); setCompletedSteps(current => current.filter(step => step !== 2)) }} placeholder="Describe what this video is about..." className="mt-1 w-full resize-none rounded-lg border border-gray-300 p-2 text-sm outline-none focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-400" />
                         <div className="mt-1 flex items-start justify-between gap-3 text-xs text-gray-500"><small>The description helps LeadHive understand the video context for AI-generated engagement.</small><span className="shrink-0">{description.length} / {MAX_DESCRIPTION_LENGTH}</span></div>
                       </div>
                     </div>
@@ -511,7 +497,7 @@ export function InteractiveDemo2() {
           ) : <p className="text-sm text-gray-500">No videos match your search.</p>}
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-blue-100 bg-blue-50/50 p-4 shadow-sm">
             <div><strong className="text-sm text-gray-900">{currentVideo.title}</strong><p className="text-sm text-gray-500">LeadHive will monitor this video for comments, analyze them, and help you reply.</p></div>
-            <div className="flex items-center gap-3">{videoSaved && <span className="inline-flex items-center gap-1 text-sm text-green-700"><Check size={16} /> Saved. You can continue.</span>}<button type="button" onClick={() => { setVideoSaved(true); completeStep(2) }} disabled={videoSaved || !videoSelectionTouched} className="lh-primary-action rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50">{videoSaved ? 'Saved' : 'Save selection'}</button></div>
+            <div className="flex items-center gap-3">{videoSaved && <span className="inline-flex items-center gap-1 text-sm text-green-700"><Check size={16} /> Saved. You can continue.</span>}<button type="button" onClick={() => { setVideoSaved(true); completeStep(2) }} disabled={videoSaved || !videoSelectionTouched} className="lh-primary-action inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50">{videoSaved ? 'Saved' : 'Save selection'} {!videoSaved && <ArrowUpRight size={14} aria-hidden="true" />}</button></div>
           </div>
         </section>}
 
@@ -539,6 +525,7 @@ export function InteractiveDemo2() {
                   <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">{replyCount} {replyCount === 1 ? 'sample reply' : 'sample replies'}</span>
                   <span className={`rounded-full px-3 py-1 text-sm font-medium ${awaitingCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-700'}`}>{awaitingCount} awaiting AI reply</span>
                 </div>
+                {!stepComplete && <ArrowDown size={18} className="animate-bounce text-[#168ca1]" aria-hidden="true" />}
                 <button type="button" role="switch" aria-label="Automatic demo replies" aria-checked={automaticReplies} disabled={processingAll} onClick={toggleAutomaticReplies} className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 ${automaticReplies ? 'bg-green-600' : 'bg-gray-300'}`}><span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${automaticReplies ? 'translate-x-7' : 'translate-x-1'}`} /></button>
                 <span className="text-sm font-semibold text-gray-700">{processingAll ? 'Processing' : automaticReplies ? 'On' : 'Off'}</span>
               </div>
@@ -569,7 +556,6 @@ export function InteractiveDemo2() {
                     <p className="mt-1 break-words text-sm text-gray-700">{comment.text}</p>
                     {replies[comment.id] && <aside aria-label="Final simulated reply" className="ml-12 mt-3 rounded-lg bg-white p-3 text-sm"><span className="inline-flex items-center gap-1 text-xs font-medium text-green-700"><Bot size={14} /> Sample AI reply</span><p className="mt-1 break-words text-gray-700">{replies[comment.id]}</p></aside>}
                     {pending[comment.id] && <p role="status" className="mt-2 flex items-center gap-2 text-xs text-blue-600"><Loader2 size={13} className="animate-spin" /> Generating reply...</p>}
-                    {!replies[comment.id] && !pending[comment.id] && <button type="button" onClick={() => generateReply(comment.id, comment.text)} className="mt-2 text-xs font-semibold text-blue-700 hover:underline">Generate sample reply</button>}
                   </div></div>
                 </article>
               ))}
@@ -580,15 +566,15 @@ export function InteractiveDemo2() {
 
         {activeStep === 4 && <section id="demo-analytics" aria-labelledby="demo-analytics-heading" className="space-y-7">
           <header className="flex flex-wrap items-end justify-between gap-4">
-            <div><p className="text-xs font-semibold uppercase tracking-wider text-blue-600">YouTube analytics</p><h2 id="demo-analytics-heading" className="mt-1 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">Performance overview</h2><p className="mt-2 text-sm text-gray-600">Sample channel and selected-video metrics in one place.</p></div>
+            <div><p className="text-xs font-semibold uppercase tracking-wider text-blue-600">YouTube analytics</p><h2 id="demo-analytics-heading" className="mt-1 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">Performance overview</h2><p className="mt-2 text-sm text-gray-600">NourDoc and the selected video are shown here; live YouTube metrics are not loaded in this demo.</p></div>
             <div className="flex items-center gap-3">
               {analyticsMessage && <span role="status" className="text-sm text-green-700">{analyticsMessage}</span>}
-              <button type="button" onClick={refreshAnalytics} className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"><BarChart3 size={16} aria-hidden="true" /> Refresh demo metrics</button>
+              <button type="button" onClick={refreshAnalytics} className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"><BarChart3 size={16} aria-hidden="true" /> Refresh demo metrics <ArrowUpRight size={14} aria-hidden="true" /></button>
             </div>
           </header>
           <section className="flex flex-wrap items-center gap-4 rounded-2xl border border-blue-100 bg-gradient-to-r from-white via-white to-blue-50/70 p-5 shadow-sm">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-lg font-bold text-white shadow-sm">{channel.name.charAt(0).toUpperCase()}</span>
-            <div className="min-w-0 flex-1"><span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Connected YouTube channel</span><h3 className="mt-0.5 truncate text-lg font-semibold text-gray-900">{channel.name}</h3><p className="mt-0.5 truncate text-xs text-gray-500">Demo channel · metrics are sample data</p></div>
+            <div className="min-w-0 flex-1"><span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Connected YouTube channel</span><h3 className="mt-0.5 truncate text-lg font-semibold text-gray-900">{channel.name}</h3><p className="mt-0.5 truncate text-xs text-gray-500">Demo channel · live metrics unavailable</p></div>
           </section>
           <section aria-labelledby="demo-channel-overview-title" className="space-y-3">
             <div className="flex flex-wrap items-baseline justify-between gap-2"><div><h3 id="demo-channel-overview-title" className="text-lg font-semibold text-gray-900">Channel metrics</h3><p className="mt-1 text-sm text-gray-500">Audience and lifetime channel reach.</p></div><span className="text-xs text-gray-400">Updated {analyticsUpdated}</span></div>
