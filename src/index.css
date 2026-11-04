@@ -7,84 +7,30 @@
 @import './shared/styles/sections.css';
 @import './shared/styles/premium-white.css';
 
-.td-session-loading,
-.oauth-return {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  background: #f7f9fc;
-  color: #1d2a3a;
+.channel-intro-copy {
+  width: 100%;
+  max-width: 42rem;
+  margin-inline: auto !important;
+  text-align: center !important;
 }
 
-.td-session-loading,
-.oauth-return-card {
-  gap: 0.75rem;
-  text-align: center;
-}
-
-.td-session-error {
-  display: grid;
-  justify-items: center;
-  gap: 1rem;
-  max-width: 32rem;
-  padding: 2rem;
-}
-
-.td-session-error h1,
-.oauth-return-card h1 {
-  margin: 0;
-  font-size: 1.35rem;
-}
-
-.td-session-loading p,
-.oauth-return-card p {
-  margin: 0;
-}
-
-.oauth-return-card {
-  display: grid;
-  justify-items: center;
-  padding: 2rem;
-}
-
-.oauth-return-action {
-  border: 0;
-  border-radius: 0.6rem;
-  padding: 0.7rem 1.1rem;
-  background: #1677d2;
-  color: white;
-  cursor: pointer;
-  font: inherit;
-  font-weight: 700;
-}
-
-.td-session-spinner,
-.oauth-return-spinner {
-  width: 2rem;
-  height: 2rem;
-  border: 3px solid #d7e2ef;
-  border-top-color: #1677d2;
-  border-radius: 50%;
-  animation: leadhive-spin 0.8s linear infinite;
-}
-
-@keyframes leadhive-spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Channel account actions intentionally live after the global button reset. */
+/* Channel account actions share sizing while keeping each action's meaning clear. */
 .channel-settings-action {
-  width: fit-content;
-  min-height: 38px;
+  display: inline-flex;
+  min-height: 44px;
   flex: 0 0 auto;
-  padding: 0 15px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: 1px solid transparent;
   border-radius: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
   white-space: nowrap;
-  transition: background-color 160ms ease, border-color 160ms ease,
-    color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease,
+    box-shadow 160ms ease, transform 160ms ease;
 }
 
 .channel-settings-action:hover {
@@ -97,36 +43,30 @@
 
 .channel-settings-action:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+  opacity: 0.6;
   transform: none;
   box-shadow: none;
 }
 
 .channel-settings-action--disconnect {
-  border: 1px solid #147f94;
-  background: #147f94;
-  color: #ffffff;
-  box-shadow: 0 1px 2px rgba(7, 16, 29, 0.12), 0 7px 16px -10px rgba(20, 127, 148, 0.75);
+  border-color: #e5e7eb;
+  background: #ffffff;
+  color: #1f2937;
+  box-shadow: 0 1px 2px rgba(7, 16, 29, 0.08);
 }
 
 .channel-settings-action--disconnect:hover {
-  border-color: #0f6d80;
-  background: #0f6d80;
-  box-shadow: 0 2px 4px rgba(7, 16, 29, 0.14), 0 10px 20px -12px rgba(15, 109, 128, 0.9);
-}
-
-.channel-settings-action--delete {
-  border: 1px solid #e3a6aa;
-  background: #ffffff;
-  color: #a53a42;
-  box-shadow: 0 1px 2px rgba(7, 16, 29, 0.06);
-}
-
-.channel-settings-action--delete:hover {
-  border-color: #cf777f;
+  border-color: #fecaca;
   background: #fff7f7;
-  color: #8f2932;
-  box-shadow: 0 2px 5px rgba(143, 41, 50, 0.1);
+}
+
+.channel-settings-action:focus-visible {
+  outline: 2px solid #2cc1df;
+  outline-offset: 2px;
+}
+
+.channel-settings-action--disconnect:focus-visible {
+  outline-color: #ef4444;
 }
 
 /* Shared LeadHive primary action color across the YouTube workspace. */
@@ -148,4 +88,41 @@
 
 .lh-primary-action:active:not(:disabled) {
   transform: translateY(0);
+}
+
+.channel-privacy-link {
+  color: #168ca1 !important;
+}
+
+.channel-privacy-link:hover {
+  color: #0f7183 !important;
+}
+
+.lh-youtube-skeleton {
+  background: linear-gradient(90deg, #edf2f5 25%, #f7fafc 50%, #edf2f5 75%);
+  background-size: 200% 100%;
+  animation: lh-youtube-shimmer 1.4s ease-in-out infinite;
+}
+
+.lh-description-attention {
+  animation: lh-description-blink 0.8s ease-in-out infinite;
+}
+
+@keyframes lh-youtube-shimmer {
+  to { background-position: -200% 0; }
+}
+
+@keyframes lh-description-blink {
+  50% {
+    border-color: #f59e0b;
+    background-color: #fffbeb;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lh-youtube-skeleton,
+  .lh-description-attention {
+    animation: none;
+  }
 }

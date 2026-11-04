@@ -4,23 +4,47 @@ import {
   ArrowLeft,
   ArrowRight,
   BarChart3,
+  Bot,
   Eye,
+  Info,
+  Loader2,
   MessageSquare,
   Play,
   RefreshCw,
+  Send,
   Sparkles,
   ThumbsUp,
   Users,
   Video,
 } from 'lucide-react'
+import { youtubeRequest } from '../api'
 
-const VIDEO_ID = 'BIek57Kj3ag'
-const VIDEO_TITLE = 'What and How to Use | NourDoc'
-const DEFAULT_VIDEO_DESCRIPTION = 'A walkthrough introducing NourDoc and explaining how to use the platform.'
+const MAX_COMMENT_LENGTH = 400
+const MAX_DEMO_USER_COMMENTS = 2
+const DEMO_CHANNELS = ['NourDoc', 'NourDoc2']
+const DEMO_VIDEOS = [
+  {
+    id: 'BIek57Kj3ag',
+    title: 'What and How to Use | NourDoc',
+    description: 'A walkthrough introducing NourDoc and explaining how to use the platform.',
+  },
+  {
+    id: 'nourdoc-getting-started',
+    title: 'Getting Started with NourDoc',
+    description: 'A demo guide to help viewers get started with NourDoc.',
+  },
+]
+const AUTH_RETURN_KEY = 'leadhive.youtube.auth-return'
 
 const CHANNEL_ANALYTICS = [
-  [['Subscribers', Users, '12.4K'], ['Videos', Video, '86'], ['Views', BarChart3, '1.2M']],
-  [['Subscribers', Users, '12.5K'], ['Videos', Video, '87'], ['Views', BarChart3, '1.21M']],
+  [
+    [['Subscribers', Users, '12.4K'], ['Videos', Video, '86'], ['Views', BarChart3, '1.2M']],
+    [['Subscribers', Users, '12.5K'], ['Videos', Video, '87'], ['Views', BarChart3, '1.21M']],
+  ],
+  [
+    [['Subscribers', Users, '8.7K'], ['Videos', Video, '54'], ['Views', BarChart3, '742K']],
+    [['Subscribers', Users, '8.8K'], ['Videos', Video, '55'], ['Views', BarChart3, '755K']],
+  ],
 ]
 
 const VIDEO_ANALYTICS = [
@@ -54,30 +78,48 @@ const SAMPLE_COMMENTS = [
 
 export function InteractiveDemo2() {
   const [showWalkthrough, setShowWalkthrough] = useState(false)
-  const [channelSelected, setChannelSelected] = useState(false)
+  const [selectedChannel, setSelectedChannel] = useState('')
+  const channelSelected = Boolean(selectedChannel)
   const [persona, setPersona] = useState({
     businessName: 'NourDoc',
     tone: 'Professional and helpful',
     services: 'NourDoc is a healthcare platform. Use this demo to introduce its services and help viewers get started.',
     rules: 'Be clear and helpful. Do not provide medical advice; direct specific questions to NourDoc’s official resources.',
   })
-  const [videoDescription, setVideoDescription] = useState(DEFAULT_VIDEO_DESCRIPTION)
-  const [videoSelected, setVideoSelected] = useState(false)
+  const [videoDescriptions, setVideoDescriptions] = useState(() => Object.fromEntries(
+    DEMO_VIDEOS.map(video => [video.id, video.description])
+  ))
+  const [selectedVideoId, setSelectedVideoId] = useState('')
+  const videoSelected = Boolean(selectedVideoId)
   const [commentsLoading, setCommentsLoading] = useState(false)
   const commentsLoadingTimer = useRef(null)
+  const [commentDraft, setCommentDraft] = useState('')
+  const [userComments, setUserComments] = useState([])
+  const [sendingComment, setSendingComment] = useState(false)
   const [aiRepliesEnabled, setAiRepliesEnabled] = useState(false)
   const [aiReplyLoading, setAiReplyLoading] = useState(false)
   const aiReplyTimer = useRef(null)
   const [showAnalytics, setShowAnalytics] = useState(false)
   const [videoAnalyticsIndex, setVideoAnalyticsIndex] = useState(0)
-  const [showChannelAnalytics, setShowChannelAnalytics] = useState(false)
-  const [channelAnalyticsIndex, setChannelAnalyticsIndex] = useState(0)
+  const [channelAnalyticsIndices, setChannelAnalyticsIndices] = useState([0, 0])
+  const [showChannelAnalytics, setShowChannelAnalytics] = useState(true)
   const canContinue =
     channelSelected &&
     persona.businessName.trim() &&
     persona.tone &&
     persona.services.trim() &&
     persona.rules.trim()
+  const activeUserComments = userComments.filter(comment => !comment.error)
+  const demoCommentLimitReached = userComments.length >= MAX_DEMO_USER_COMMENTS
+  const demoCommentCount = SAMPLE_COMMENTS.length + activeUserComments.length
+  const demoThreadReplyCount =
+    SAMPLE_COMMENTS.filter(comment => comment.reply).length +
+    (aiRepliesEnabled && !aiReplyLoading && SAMPLE_COMMENTS.some(comment => !comment.reply) ? 1 : 0) +
+    activeUserComments.filter(comment => comment.reply).length
+  const awaitingAiReplyCount =
+    SAMPLE_COMMENTS.filter(comment => !comment.reply).length -
+    (aiRepliesEnabled && !aiReplyLoading && SAMPLE_COMMENTS.some(comment => !comment.reply) ? 1 : 0) +
+    activeUserComments.filter(comment => comment.pending || !comment.reply).length
 
   useEffect(() => () => {
     window.clearTimeout(commentsLoadingTimer.current)
@@ -88,10 +130,50 @@ export function InteractiveDemo2() {
     setPersona(current => ({ ...current, [field]: value }))
   }
 
-  function selectVideo() {
-    if (videoSelected) return
+  function updateUserComment(id, updates) {
+    setUserComments(current => current.map(comment => (
+      comment.id === id ? { ...comment, ...updates } : comment
+    )))
+  }
 
-    setVideoSelected(true)
+  async function submitComment(event) {
+    event.preventDefault()
+    const text = commentDraft.trim()
+    if (
+      !aiRepliesEnabled ||
+      !text ||
+      sendingComment ||
+      userComments.length >= MAX_DEMO_USER_COMMENTS
+    ) return
+
+    const id = crypto.randomUUID()
+    setCommentDraft('')
+    setSendingComment(true)
+    setUserComments(current => [
+      { id, text, reply: '', error: '', pending: true, time: new Date() },
+      ...current,
+    ])
+
+    try {
+      const response = await youtubeRequest('/demo/reply', {
+        method: 'POST',
+        body: { comment: text },
+      })
+      updateUserComment(id, { reply: response.reply, pending: false })
+    } catch (error) {
+      updateUserComment(id, {
+        error: error.message || 'Could not get a reply right now. Please try again.',
+        pending: false,
+      })
+    } finally {
+      setSendingComment(false)
+    }
+  }
+
+  function selectVideo(videoId) {
+    if (selectedVideoId === videoId) return
+
+    setSelectedVideoId(videoId)
     setAiRepliesEnabled(false)
     setAiReplyLoading(false)
     window.clearTimeout(aiReplyTimer.current)
@@ -105,7 +187,7 @@ export function InteractiveDemo2() {
   }
 
   function unselectVideo() {
-    setVideoSelected(false)
+    setSelectedVideoId('')
     setAiRepliesEnabled(false)
     setAiReplyLoading(false)
     window.clearTimeout(aiReplyTimer.current)
@@ -136,12 +218,61 @@ export function InteractiveDemo2() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3 sm:px-6">
-          <img src="/leadhive-logo.png" alt="LeadHive AI" className="h-8 w-auto shrink-0" />
+        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
+          <Link
+            to="/"
+            onClick={() => sessionStorage.removeItem(AUTH_RETURN_KEY)}
+            aria-label="Go to LeadHive home"
+            className="shrink-0"
+          >
+            <img src="/leadhive-logo.png" alt="LeadHive AI" className="h-8 w-auto" />
+          </Link>
           <span className="hidden h-6 w-px bg-gray-300 sm:block" aria-hidden="true" />
-          <span className="hidden text-sm font-semibold text-gray-700 sm:block">YouTube Intelligence</span>
-          <div className="flex-1" />
-          <Link to="/" className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900">
+          <Link
+            to="/flow?step=1"
+            onClick={() => sessionStorage.removeItem(AUTH_RETURN_KEY)}
+            className="inline-flex min-w-0 shrink items-center gap-1.5 whitespace-nowrap text-xs font-semibold text-slate-800 transition hover:text-slate-600 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 sm:gap-2 sm:text-sm"
+          >
+            <svg width="18" height="14" viewBox="0 0 20 15" aria-hidden="true">
+              <rect width="20" height="15" rx="4" fill="#ff0033" />
+              <path d="M8 3.5v8l6-4-6-4Z" fill="white" />
+            </svg>
+            <span>YouTube Intelligence</span>
+          </Link>
+          <nav aria-label="Demo steps" className="flex flex-1 justify-center">
+            <div className="flex flex-wrap items-center justify-center gap-1">
+              <button
+                type="button"
+                aria-current={!showWalkthrough ? 'step' : undefined}
+                onClick={() => setShowWalkthrough(false)}
+                className={`rounded-lg px-3 py-2 text-sm transition-colors ${
+                  !showWalkthrough
+                    ? 'bg-cyan-50 font-semibold text-cyan-700'
+                    : 'font-medium text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Channel &amp; Persona
+              </button>
+              <button
+                type="button"
+                aria-current={showWalkthrough ? 'step' : undefined}
+                onClick={() => setShowWalkthrough(true)}
+                disabled={!canContinue}
+                className={`rounded-lg px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  showWalkthrough
+                    ? 'bg-cyan-50 font-semibold text-cyan-700'
+                    : 'font-medium text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Videos, Replies &amp; Analytics
+              </button>
+            </div>
+          </nav>
+          <Link
+            to="/"
+            onClick={() => sessionStorage.removeItem(AUTH_RETURN_KEY)}
+            className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900"
+          >
             <ArrowLeft size={15} aria-hidden="true" />
             Go to Home
           </Link>
@@ -150,110 +281,106 @@ export function InteractiveDemo2() {
 
       {!showWalkthrough ? (
         <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
-          <div className="mb-6 flex items-center justify-center">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                aria-current="step"
-                onClick={() => setShowWalkthrough(false)}
-                className="rounded-lg border border-red-100 bg-red-50 px-4 py-2 text-base font-bold text-red-700 shadow-sm transition-colors"
-              >
-                Step 1
-              </button>
-              <span className="text-sm font-semibold text-gray-400">of</span>
-              <button
-                type="button"
-                onClick={() => setShowWalkthrough(true)}
-                disabled={!canContinue}
-                className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-base font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Step 2
-              </button>
-            </div>
-          </div>
           <header className="mb-7">
             <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
-              Choose your channel and set your business details
+              Select a YouTube channel and set the AI persona
             </h1>
           </header>
 
           <div className="grid items-start gap-5 lg:grid-cols-[minmax(230px,0.7fr)_minmax(0,1.5fr)]">
             <section aria-labelledby="demo-channel-heading" className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-50 text-sm font-bold text-red-600">1</span>
-                <div className="min-w-0">
-                  <h2 id="demo-channel-heading" className="text-lg font-bold leading-6 text-gray-900">Choose your channel</h2>
+              <h2 id="demo-channel-heading" className="text-lg font-bold leading-6 text-gray-900">Select a YouTube channel</h2>
+              <div role="note" className="mt-4 flex gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-950 shadow-sm">
+                <Info size={20} className="mt-0.5 shrink-0 text-amber-700" aria-hidden="true" />
+                <div>
+                  <p className="text-sm font-bold">Fictional demo channel</p>
+                  <p className="mt-1 text-xs leading-5">
+                    This channel and its stats are static sample data, shown only to demonstrate the process. It is not a real connected YouTube account.
+                  </p>
                 </div>
               </div>
-              <button
-                type="button"
-                aria-pressed={channelSelected}
-                onClick={() => {
-                  if (channelSelected) setShowChannelAnalytics(false)
-                  setChannelSelected(!channelSelected)
-                }}
-                className={`mt-4 flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left transition ${
-                  channelSelected ? 'border-red-500 bg-red-50/60' : 'border-gray-200 bg-white hover:border-red-200'
-                }`}
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-600 text-white shadow-sm">
-                  <Play size={18} fill="currentColor" aria-hidden="true" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-semibold text-gray-900">NourDoc</span>
-                  <span className="mt-0.5 block text-xs font-medium text-red-600">YouTube</span>
-                  <span className="block text-xs text-gray-500">Demo channel</span>
-                </span>
-                <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                  channelSelected ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'
-                }`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${channelSelected ? 'bg-green-500' : 'bg-gray-400'}`} aria-hidden="true" />
-                  {channelSelected ? 'Connected' : 'Disconnected'}
-                </span>
-              </button>
-              {channelSelected && (
-                <button
-                  type="button"
-                  aria-expanded={showChannelAnalytics}
-                  onClick={() => setShowChannelAnalytics(current => !current)}
-                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50"
-                >
-                  <BarChart3 size={16} aria-hidden="true" />
-                  {showChannelAnalytics ? 'Hide channel analytics' : 'Channel analytics'}
-                </button>
-              )}
-              {channelSelected && showChannelAnalytics && (
-                <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3" aria-label="Channel analytics">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-medium text-gray-600">Channel analytics</p>
-                    <button
-                      type="button"
-                      onClick={() => setChannelAnalyticsIndex(index => (index + 1) % CHANNEL_ANALYTICS.length)}
-                      className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50"
-                      aria-label="Refresh channel analytics"
-                    >
-                      <RefreshCw size={13} aria-hidden="true" />
-                      Refresh
-                    </button>
-                  </div>
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    {CHANNEL_ANALYTICS[channelAnalyticsIndex].map(([label, Icon, value]) => (
-                      <div key={label} className="rounded-lg bg-white p-2 text-center">
-                        <Icon size={15} className="mx-auto text-red-600" aria-hidden="true" />
-                        <p className="mt-1 text-[11px] text-gray-500">{label}</p>
-                        <p className="text-sm font-semibold text-gray-900">{value}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div className="mt-4 space-y-3">
+                {DEMO_CHANNELS.map(channel => {
+                  const isSelected = selectedChannel === channel
+                  const channelIndex = DEMO_CHANNELS.indexOf(channel)
+                  return (
+                    <div key={channel} className="space-y-2">
+                      <button
+                        type="button"
+                        aria-pressed={isSelected}
+                        onClick={() => {
+                          setSelectedChannel(isSelected ? '' : channel)
+                          setShowChannelAnalytics(!isSelected)
+                        }}
+                        className={`flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left transition ${
+                          isSelected ? 'border-red-500 bg-red-50/60' : 'border-gray-200 bg-white hover:border-red-200'
+                        }`}
+                      >
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-600 text-white shadow-sm">
+                          <Play size={18} fill="currentColor" aria-hidden="true" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-semibold text-gray-900">{channel}</span>
+                          <span className="mt-0.5 block text-xs font-medium text-red-600">YouTube</span>
+                          <span className="block text-xs text-gray-500">Demo channel</span>
+                        </span>
+                        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          isSelected ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${isSelected ? 'bg-green-500' : 'bg-gray-400'}`} aria-hidden="true" />
+                          {isSelected ? 'Connected' : 'Disconnected'}
+                        </span>
+                      </button>
+                      {isSelected && (
+                        <>
+                          <button
+                            type="button"
+                            aria-expanded={showChannelAnalytics}
+                            onClick={() => setShowChannelAnalytics(visible => !visible)}
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50"
+                          >
+                            <BarChart3 size={16} aria-hidden="true" />
+                            {showChannelAnalytics ? 'Hide channel analytics' : 'Show channel analytics'}
+                          </button>
+                          {showChannelAnalytics && (
+                            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3" aria-label={`${channel} analytics`}>
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-xs font-medium text-gray-600">Channel analytics</p>
+                                <button
+                                  type="button"
+                                  onClick={() => setChannelAnalyticsIndices(indices => indices.map((index, i) => (
+                                    i === channelIndex ? (index + 1) % CHANNEL_ANALYTICS[channelIndex].length : index
+                                  )))}
+                                  className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50"
+                                  aria-label={`Refresh ${channel} analytics`}
+                                >
+                                  <RefreshCw size={13} aria-hidden="true" />
+                                  Refresh
+                                </button>
+                              </div>
+                              <div className="mt-3 grid grid-cols-3 gap-2">
+                                {CHANNEL_ANALYTICS[channelIndex][channelAnalyticsIndices[channelIndex]].map(([label, Icon, value]) => (
+                                  <div key={label} className="rounded-lg bg-white p-2 text-center">
+                                    <Icon size={15} className="mx-auto text-red-600" aria-hidden="true" />
+                                    <p className="mt-1 text-[11px] text-gray-500">{label}</p>
+                                    <p className="text-sm font-semibold text-gray-900">{value}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
               <p className="mt-3 text-xs leading-5 text-gray-500">This is where your video and comments come from.</p>
             </section>
 
             <section aria-labelledby="demo-persona-heading" className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-              <div className="flex items-center justify-center gap-3 text-center">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-50 text-sm font-bold text-red-600">2</span>
-                <h2 id="demo-persona-heading" className="text-lg font-extrabold text-gray-900">Set your business details</h2>
+              <div className="flex items-center justify-center text-center">
+                <h2 id="demo-persona-heading" className="text-lg font-extrabold text-gray-900">Set the AI persona</h2>
               </div>
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <label className="block sm:col-span-2">
@@ -306,43 +433,25 @@ export function InteractiveDemo2() {
                   />
                 </label>
               </div>
+              <div className="mt-5 flex justify-end">
+                <button
+                  type="button"
+                  disabled={!canContinue}
+                  onClick={() => setShowWalkthrough(true)}
+                  className="lh-primary-action inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Save and continue <ArrowRight size={16} aria-hidden="true" />
+                </button>
+              </div>
             </section>
           </div>
 
-          <div className="mt-6 flex flex-col-reverse items-start justify-between gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:items-center">
+          <div className="mt-6 border-t border-gray-200 pt-5">
             <p className="text-xs text-gray-500">Demo only. Your entries stay in this page and are not saved.</p>
-            <button
-              type="button"
-              disabled={!canContinue}
-              onClick={() => setShowWalkthrough(true)}
-              className="lh-primary-action inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Save and continue <ArrowRight size={16} aria-hidden="true" />
-            </button>
           </div>
         </main>
           ) : (
             <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:py-8">
-              <div className="mb-6 flex items-center justify-center">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowWalkthrough(false)}
-                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-base font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50"
-                  >
-                    Step 1
-                  </button>
-                  <span className="text-sm font-semibold text-gray-400">of</span>
-                  <button
-                    type="button"
-                    aria-current="step"
-                    onClick={() => setShowWalkthrough(true)}
-                    className="rounded-lg border border-red-100 bg-red-50 px-4 py-2 text-base font-bold text-red-700 shadow-sm transition-colors"
-                  >
-                    Step 2
-                  </button>
-                </div>
-              </div>
               <header className="mb-6">
                 <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
                   Select a video to generate AI-powered replies to its comments.
@@ -351,133 +460,163 @@ export function InteractiveDemo2() {
 
               <div className="grid items-start gap-5 lg:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.5fr)]">
                 <section aria-labelledby="demo-videos-heading" className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-50 text-sm font-bold text-red-600">3</span>
-                    <h2 id="demo-videos-heading" className="text-lg font-bold text-gray-900">Videos</h2>
-                  </div>
-                  <article className={`mt-4 rounded-xl border-2 p-3 transition ${videoSelected ? 'border-red-500 bg-red-50/60' : 'border-gray-200 bg-white'}`}>
-                    <div className="grid grid-cols-[minmax(96px,0.8fr)_minmax(0,1.4fr)] items-center gap-3">
-                      <img
-                        src={`https://i.ytimg.com/vi/${VIDEO_ID}/mqdefault.jpg`}
-                        alt=""
-                        className="aspect-video w-full rounded-lg bg-gray-100 object-cover"
-                      />
-                      <div className="min-w-0">
-                        <h3 className="font-semibold leading-5 text-gray-900">{VIDEO_TITLE}</h3>
-                      </div>
-                    </div>
-                    <label className="mt-3 block">
-                      <span className="mb-1 block text-xs font-medium text-gray-600">Video description</span>
-                      <textarea
-                        value={videoDescription}
-                        onChange={event => setVideoDescription(event.target.value)}
-                        disabled={videoSelected}
-                        maxLength={1000}
-                        rows={3}
-                        placeholder="Write a short description of this video"
-                        className="w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm leading-5 text-gray-700 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
-                      />
-                    </label>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                      <button
-                        type="button"
-                        aria-pressed={videoSelected}
-                        onClick={() => {
-                          if (videoSelected) {
-                            unselectVideo()
-                          } else {
-                            selectVideo()
-                          }
-                          setShowAnalytics(false)
-                        }}
-                        className={`inline-flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold ${
-                          videoSelected ? 'border-red-200 bg-red-50 text-red-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        {videoSelected ? 'Unselect video' : 'Select this video'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          selectVideo()
-                          setShowAnalytics(current => !current)
-                        }}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
-                      >
-                        <BarChart3 size={16} aria-hidden="true" />
-                        {showAnalytics ? 'Hide analytics' : 'View analytics'}
-                      </button>
-                    </div>
-                    {showAnalytics && (
-                      <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3" aria-label="Video analytics">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-xs font-medium text-gray-600">Video analytics</p>
-                          <button
-                            type="button"
-                            onClick={() => setVideoAnalyticsIndex(index => (index + 1) % VIDEO_ANALYTICS.length)}
-                            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50"
-                            aria-label="Refresh video analytics"
-                          >
-                            <RefreshCw size={13} aria-hidden="true" />
-                            Refresh
-                          </button>
-                        </div>
-                        <div className="mt-3 grid grid-cols-3 gap-2">
-                          {VIDEO_ANALYTICS[videoAnalyticsIndex].map(([label, Icon, value]) => (
-                            <div key={label} className="rounded-lg bg-white p-2 text-center">
-                              <Icon size={15} className="mx-auto text-red-600" aria-hidden="true" />
-                              <p className="mt-1 text-[11px] text-gray-500">{label}</p>
-                              <p className="text-sm font-semibold text-gray-900">{value}</p>
+                  <h2 id="demo-videos-heading" className="text-lg font-bold text-gray-900">Select a video</h2>
+                  <div className="mt-4 space-y-3">
+                    {DEMO_VIDEOS.map(video => {
+                      const isSelected = selectedVideoId === video.id
+                      return (
+                        <article key={video.id} className={`rounded-xl border-2 p-3 transition ${isSelected ? 'border-red-500 bg-red-50/60' : 'border-gray-200 bg-white'}`}>
+                          <div className="grid grid-cols-[minmax(96px,0.8fr)_minmax(0,1.4fr)] items-center gap-3">
+                            {video.id === 'BIek57Kj3ag' ? (
+                              <img
+                                src={`https://i.ytimg.com/vi/${video.id}/mqdefault.jpg`}
+                                alt=""
+                                className="aspect-video w-full rounded-lg bg-gray-100 object-cover"
+                              />
+                            ) : (
+                              <div
+                                role="img"
+                                aria-label={`${video.title} thumbnail`}
+                                className="relative flex aspect-video w-full flex-col items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-slate-900 via-red-900 to-rose-700 text-white"
+                              >
+                                <span className="absolute -right-5 -top-8 h-28 w-28 rounded-full border-[14px] border-white/10" aria-hidden="true" />
+                                <span className="absolute -bottom-12 -left-7 h-32 w-32 rounded-full bg-white/10" aria-hidden="true" />
+                                <span className="relative mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-red-700 shadow-lg">
+                                  <Play size={18} fill="currentColor" aria-hidden="true" />
+                                </span>
+                                <span className="relative px-2 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-white/90">NourDoc</span>
+                                <span className="relative mt-1 px-2 text-center text-xs font-semibold leading-tight">Getting Started</span>
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <h3 className="font-semibold leading-5 text-gray-900">{video.title}</h3>
                             </div>
-                          ))}
-                        </div>
-                        <p className="mt-2 text-[11px] text-gray-500">Demo analytics shown for illustration.</p>
-                      </div>
-                    )}
-                  </article>
+                          </div>
+                          <label className="mt-3 block">
+                            <span className="mb-1 block text-xs font-medium text-gray-600">Video description</span>
+                            <textarea
+                              value={videoDescriptions[video.id]}
+                              onChange={event => setVideoDescriptions(current => ({
+                                ...current,
+                                [video.id]: event.target.value,
+                              }))}
+                              disabled={isSelected}
+                              maxLength={1000}
+                              rows={3}
+                              placeholder="Write a short description of this video"
+                              className="w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm leading-5 text-gray-700 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+                            />
+                          </label>
+                          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                            <button
+                              type="button"
+                              aria-pressed={isSelected}
+                              onClick={() => {
+                                if (isSelected) {
+                                  unselectVideo()
+                                  setShowAnalytics(false)
+                                } else {
+                                  selectVideo(video.id)
+                                  setShowAnalytics(true)
+                                }
+                              }}
+                              className={`inline-flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold ${
+                                isSelected ? 'border-red-200 bg-red-50 text-red-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              {isSelected ? 'Unselect video' : 'Select this video'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!isSelected) selectVideo(video.id)
+                                setShowAnalytics(current => isSelected ? !current : true)
+                              }}
+                              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
+                            >
+                              <BarChart3 size={16} aria-hidden="true" />
+                              {isSelected && showAnalytics ? 'Hide analytics' : 'View analytics'}
+                            </button>
+                          </div>
+                          {isSelected && showAnalytics && (
+                            <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3" aria-label="Video analytics">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-xs font-medium text-gray-600">Video analytics</p>
+                                <button
+                                  type="button"
+                                  onClick={() => setVideoAnalyticsIndex(index => (index + 1) % VIDEO_ANALYTICS.length)}
+                                  className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50"
+                                  aria-label="Refresh video analytics"
+                                >
+                                  <RefreshCw size={13} aria-hidden="true" />
+                                  Refresh
+                                </button>
+                              </div>
+                              <div className="mt-3 grid grid-cols-3 gap-2">
+                                {VIDEO_ANALYTICS[videoAnalyticsIndex].map(([label, Icon, value]) => (
+                                  <div key={label} className="rounded-lg bg-white p-2 text-center">
+                                    <Icon size={15} className="mx-auto text-red-600" aria-hidden="true" />
+                                    <p className="mt-1 text-[11px] text-gray-500">{label}</p>
+                                    <p className="text-sm font-semibold text-gray-900">{value}</p>
+                                  </div>
+                                ))}
+                              </div>
+                              <p className="mt-2 text-[11px] text-gray-500">Demo analytics shown for illustration.</p>
+                            </div>
+                          )}
+                        </article>
+                      )
+                    })}
+                  </div>
                 </section>
 
                 <section aria-labelledby="demo-command-center-heading" className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
                   <div className="border-b border-gray-100 pb-4">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-50 text-sm font-bold text-red-600">4</span>
-                      <div>
-                        <h2 id="demo-command-center-heading" className="text-lg font-semibold text-gray-900">Comments</h2>
-                      </div>
-                    </div>
+                    <h2 id="demo-command-center-heading" className="text-lg font-semibold text-gray-900">Comments &amp; AI replies</h2>
                   </div>
-                  {videoSelected && !commentsLoading && (
-                    <>
-                      <div className="mt-4 flex flex-wrap items-center gap-2">
-                      <span className={`rounded-full px-3 py-1 text-xs font-medium ${
-                        aiRepliesEnabled ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
-                      }`}>
-                        3 comments
+                  {videoSelected && (
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700">
+                        {demoCommentCount} comments
                       </span>
                       <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
-                        {aiRepliesEnabled && !aiReplyLoading ? '3 thread replies' : '2 thread replies'}
+                        {demoThreadReplyCount} thread replies
                       </span>
-                      <span className={`rounded-full px-3 py-1 text-xs font-medium ${
-                        aiRepliesEnabled && !aiReplyLoading ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                      }`}>
-                        {aiRepliesEnabled && !aiReplyLoading ? '0 awaiting AI reply' : '1 awaiting AI reply'}
+                      <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
+                        {awaitingAiReplyCount} awaiting AI reply
                       </span>
-                      </div>
+                    </div>
+                  )}
+                  {videoSelected && !commentsLoading && (
+                    <>
                       <div className={`mt-4 flex items-center justify-between gap-4 rounded-2xl border p-4 shadow-sm transition-all sm:p-5 ${
                         aiRepliesEnabled
                           ? 'border-red-300 bg-gradient-to-r from-red-50 via-white to-rose-50 shadow-red-100'
                           : 'border-red-100 bg-gradient-to-r from-red-50 via-white to-rose-50'
                       }`}>
                         <div className="flex min-w-0 items-center gap-3">
-                          <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
-                            aiRepliesEnabled ? 'bg-red-600 text-white shadow-md shadow-red-200' : 'bg-white text-red-600 shadow-sm'
-                          }`}>
-                            <Sparkles size={21} aria-hidden="true" />
+                          <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-100 bg-white shadow-sm">
+                            <svg
+                              width="24"
+                              height="18"
+                              viewBox="0 0 24 18"
+                              role="img"
+                              aria-label="YouTube"
+                            >
+                              <rect x="1" y="1" width="22" height="16" rx="5" fill="#ff0033" />
+                              <path d="M10 5v8l6-4-6-4Z" fill="white" />
+                            </svg>
+                            <span
+                              className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-cyan-500 text-white shadow-sm"
+                              aria-label="AI"
+                            >
+                              <Sparkles size={10} strokeWidth={2.5} aria-hidden="true" />
+                            </span>
                           </span>
                           <div className="min-w-0">
-                            <p className="text-sm font-bold text-gray-900 sm:text-base">AI-powered replies</p>
+                            <p className="text-sm font-bold text-gray-900 sm:text-base">YouTube AI replies</p>
                             <p className="mt-0.5 text-xs leading-5 text-gray-600 sm:text-sm">
-                              Respond to comments in your brand voice, automatically.
+                              AI reads video comments and replies in your brand voice.
                             </p>
                           </div>
                         </div>
@@ -516,8 +655,107 @@ export function InteractiveDemo2() {
                       <Video size={34} className="text-gray-300" aria-hidden="true" />
                       <h3 className="mt-3 font-semibold text-gray-800">Choose a video to view its comments</h3>
                     </div>
-                  ) : aiRepliesEnabled ? (
+                  ) : !aiRepliesEnabled ? (
+                    <div className="flex min-h-[220px] flex-col items-center justify-center px-4 text-center">
+                      <MessageSquare size={34} className="text-gray-300" aria-hidden="true" />
+                      <h3 className="mt-3 font-semibold text-gray-800">Comments are hidden</h3>
+                      <p className="mt-1 max-w-sm text-sm text-gray-500">
+                        Turn on AI-powered replies to view comments and try the interactive demo.
+                      </p>
+                    </div>
+                  ) : (
                     <div className="mt-4 space-y-3">
+                      <form onSubmit={submitComment} className="rounded-xl border border-red-100 bg-gradient-to-br from-red-50/70 to-white p-4 shadow-sm">
+                        <label
+                          htmlFor="interactive-demo-2-comment"
+                          className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-800"
+                        >
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-red-100 text-red-700">
+                            <MessageSquare size={14} aria-hidden="true" />
+                          </span>
+                          Try it yourself: write a comment
+                        </label>
+                        <textarea
+                          id="interactive-demo-2-comment"
+                          value={commentDraft}
+                          onChange={event => setCommentDraft(event.target.value)}
+                          maxLength={MAX_COMMENT_LENGTH}
+                          rows={2}
+                          placeholder="Ask a question or leave a comment..."
+                          disabled={demoCommentLimitReached}
+                          className="w-full resize-none rounded-lg border-2 border-red-100 bg-white p-3 text-sm shadow-sm outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+                        />
+                        <p
+                          role="note"
+                          className="mt-3 flex gap-3 rounded-xl border-2 border-amber-400 bg-amber-100 px-4 py-3 text-sm text-amber-950 shadow-md ring-2 ring-amber-200"
+                        >
+                          <Info size={20} className="mt-0.5 shrink-0 text-amber-700" aria-hidden="true" />
+                          <span className="leading-5">
+                            <strong className="font-extrabold">Demo Limit:</strong> The demo version allows you to submit up to{' '}
+                            <strong className="font-extrabold">2 comments</strong> to experience and evaluate how the AI analyzes
+                            comments and generates replies.
+                          </span>
+                        </p>
+                        <div className="mt-2 flex items-center justify-between gap-3">
+                          <span className="text-xs text-gray-400">
+                            {commentDraft.length}/{MAX_COMMENT_LENGTH}
+                          </span>
+                          <button
+                            type="submit"
+                            disabled={!commentDraft.trim() || sendingComment || demoCommentLimitReached}
+                            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {sendingComment
+                              ? <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+                              : <Send size={14} aria-hidden="true" />}
+                            Comment
+                          </button>
+                        </div>
+                        <p className="mt-2 text-[11px] text-gray-500">
+                          Demo only: your comment is not posted to YouTube.
+                        </p>
+                      </form>
+
+                      {userComments.map(comment => (
+                        <article key={comment.id} className="rounded-xl border border-gray-200 p-3 sm:p-4">
+                          <div className="flex items-start gap-3">
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 text-xs font-bold text-red-700">
+                              YOU
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                <span className="text-sm font-semibold text-gray-900">You</span>
+                                <time className="text-xs text-gray-400">
+                                  {comment.time.toLocaleTimeString()}
+                                </time>
+                              </div>
+                              <p className="mt-1 break-words text-sm text-gray-700">{comment.text}</p>
+                              {comment.error ? (
+                                <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                  {comment.error}
+                                </p>
+                              ) : (
+                                <div className="mt-3 rounded-lg border border-red-100 bg-red-50/50 p-3">
+                                  <div className="flex items-center gap-2 text-xs font-semibold text-red-700">
+                                    <Bot size={14} aria-hidden="true" />
+                                    {persona.businessName || 'AI'} assistant
+                                    {comment.pending && (
+                                      <span role="status" className="inline-flex items-center gap-1 font-normal">
+                                        <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+                                        Generating reply...
+                                      </span>
+                                    )}
+                                  </div>
+                                  {comment.reply && (
+                                    <p className="mt-1 break-words text-sm text-gray-700">{comment.reply}</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+
                       {SAMPLE_COMMENTS.map(comment => {
                         const generatedReply = aiRepliesEnabled && !aiReplyLoading && !comment.reply
                           ? {
@@ -571,7 +809,7 @@ export function InteractiveDemo2() {
                         )
                       })}
                     </div>
-                  ) : null}
+                  )}
                 </section>
               </div>
 

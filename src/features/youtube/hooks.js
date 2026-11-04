@@ -15,7 +15,13 @@ function errorMessage(error, fallback) {
 export function useYoutubeResource(path, refresh = 0, pollInterval = 0) {
   // One key per request, so stale results from a previous path are never shown
   const requestKey = path ? `${path}:${refresh}` : null
-  const [result, setResult] = useState({ key: null, data: null, error: '', status: null })
+  const [result, setResult] = useState({
+    key: null,
+    path: null,
+    data: null,
+    error: '',
+    status: null,
+  })
 
   useEffect(() => {
     if (!path) return
@@ -24,13 +30,14 @@ export function useYoutubeResource(path, refresh = 0, pollInterval = 0) {
     let timeout
     async function fetchResource() {
       try {
-        const data = await youtubeRequest(path, { signal: controller.signal })
+        const data = await youtubeRequest(path, { signal: controller.signal, cache: 'no-store' })
         if (controller.signal.aborted) return
-        setResult({ key: requestKey, data, error: '', status: null })
+        setResult({ key: requestKey, path, data, error: '', status: null })
       } catch (error) {
         if (controller.signal.aborted) return
         setResult({
           key: requestKey,
+          path,
           data: null,
           error: errorMessage(error, 'Unable to load this section.'),
           status: error instanceof YoutubeApiError ? error.status : null,
@@ -51,6 +58,11 @@ export function useYoutubeResource(path, refresh = 0, pollInterval = 0) {
 
   // loading is derived: no result yet for the current key means still loading
   if (!requestKey) return { data: null, error: '', status: null, loading: false }
-  if (result.key !== requestKey) return { data: null, error: '', status: null, loading: true }
-  return { ...result, loading: false }
+  const samePath = result.path === path
+  return {
+    data: samePath ? result.data : null,
+    error: result.key === requestKey ? result.error : '',
+    status: result.key === requestKey ? result.status : null,
+    loading: result.key !== requestKey,
+  }
 }

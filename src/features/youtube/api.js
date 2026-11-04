@@ -13,16 +13,6 @@ export class YoutubeApiError extends Error {
 
 const AUTH_TIMEOUT_MS = 12000
 
-// Maps the frontend's auth paths to the backend's real ones
-//   /auth/youtube/login  -> /auth/google/login
-//   /auth/youtube/logout -> /auth/logout
-export function youtubeAuthUrl(path) {
-  const normalized = path.startsWith('/') ? path : `/${path}`
-  if (normalized === '/auth/youtube/login') return '/auth/google/login'
-  if (normalized === '/auth/youtube/logout') return '/auth/logout'
-  return normalized
-}
-
 // Reads the body as text first, then parses JSON only when the server says it is JSON
 async function responseBody(response) {
   const text = await response.text()
@@ -73,6 +63,7 @@ export async function youtubeRequest(path, options = {}) {
     response = await fetch(path, {
       method: options.method || 'GET',
       credentials: 'include', // sends the access_token cookie
+      ...(options.cache ? { cache: options.cache } : {}),
       signal: requestController.signal,
       headers: {
         Accept: 'application/json',
@@ -109,10 +100,6 @@ export async function youtubeRequest(path, options = {}) {
 
 // ── Auth endpoints ──────────────────────────────────────────────────────
 
-// GET /auth/me: is the user logged in? (401 if not)
-export const getAuthMe = (options = {}) =>
-  youtubeRequest('/auth/me', { timeoutMs: AUTH_TIMEOUT_MS, ...options })
-
 // GET /auth/channels: the signed-in user's saved YouTube channels
 export const getAuthChannels = (options = {}) =>
   youtubeRequest('/auth/channels', { timeoutMs: AUTH_TIMEOUT_MS, ...options })
@@ -121,13 +108,20 @@ export const getAuthChannels = (options = {}) =>
 export const getCommentMonitoring = (options = {}) =>
   youtubeRequest('/auth/comment-monitoring', options)
 
-// PUT /auth/comment-monitoring: save the account's automatic comment monitoring preference
-export const setCommentMonitoring = (enabled, options = {}) =>
-  youtubeRequest('/auth/comment-monitoring', {
+// PUT /auth/comment-monitoring: save monitoring and optional comment polling preference
+export const setCommentMonitoring = (enabled, options = {}) => {
+  const { commentFetchIntervalMinutes, ...requestOptions } = options
+  return youtubeRequest('/auth/comment-monitoring', {
     method: 'PUT',
-    body: { enabled },
-    ...options,
+    body: {
+      enabled,
+      ...(commentFetchIntervalMinutes !== undefined
+        ? { comment_fetch_interval_minutes: commentFetchIntervalMinutes }
+        : {}),
+    },
+    ...requestOptions,
   })
+}
 
 // POST /auth/logout: clears the JWT cookie
 export const logoutUser = () => youtubeRequest('/auth/logout', { method: 'POST' })

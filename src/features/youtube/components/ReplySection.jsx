@@ -1,15 +1,16 @@
-// Step 4 of FlowWidget: review saved comments and configure background monitoring.
+// Workspace panel: review saved comments and configure background monitoring.
 // Data: GET /auth/comment-monitoring, GET /comments/{channel_id}/{video_id},
 // PUT /auth/comment-monitoring.
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertCircle,
-  ArrowUpRight,
   CheckCircle2,
   CornerDownRight,
-  Info,
   MessageSquare,
+  RefreshCw,
+  Sparkles,
   ThumbsUp,
+  Video,
 } from 'lucide-react'
 import {
   getCommentMonitoring,
@@ -18,9 +19,12 @@ import {
   youtubeRequest,
 } from '../api'
 import { useYoutubeResource } from '../hooks'
+import {
+  getCommentFetchIntervalMs,
+  toCommentFetchIntervalMinutes,
+} from '../commentPolling'
 
 const enc = encodeURIComponent
-const COMMENTS_POLL_INTERVAL_MS = 5 * 60 * 1_000
 
 // The comments response shape isn't in the OpenAPI spec, so accept the likely variations
 function toComment(raw, channelId) {
@@ -40,8 +44,10 @@ function toComment(raw, channelId) {
     raw.comment_id ||
     inner.id ||
     text.slice(0, 20)
-  const aiReply = raw.ai_reply || raw.aiReply || ''
-  const replyStatus = raw.reply_status || raw.replyStatus || ''
+  const aiReply = typeof (raw.ai_reply || raw.aiReply) === 'string'
+    ? raw.ai_reply || raw.aiReply
+    : ''
+  const replyStatus = String(raw.reply_status || raw.replyStatus || '').trim().toLowerCase()
   const authorChannelId =
     (typeof inner.authorChannelId === 'string' ? inner.authorChannelId : inner.authorChannelId?.value) ||
     inner.author_channel_id ||
@@ -50,19 +56,39 @@ function toComment(raw, channelId) {
     raw.author_channel_id ||
     ''
   const canReply = raw.can_reply ?? raw.canReply
-  const explicitlyReplied =
+  const rawReplies = Array.isArray(raw.replies)
+    ? raw.replies
+    : Array.isArray(raw.replies?.comments)
+      ? raw.replies.comments
+      : []
+  const replies = rawReplies
+    .map(reply => toComment(reply, channelId))
+    .filter(Boolean)
+  const hasChannelReply = replies.some(reply => (
+    reply.isAiReply ||
+    (channelId && reply.authorChannelId === channelId) ||
+    (aiReply && normalizedText(reply.text) === normalizedText(aiReply))
+  ))
+  const hasRepliedFlag =
     raw.is_replied === true ||
     raw.isReplied === true ||
     raw.replied === true ||
     raw.has_reply === true ||
-    raw.hasReply === true ||
-    replyStatus === 'posted' ||
-    Boolean(raw.youtube_reply_id || raw.youtubeReplyId)
+    raw.hasReply === true
+  const explicitlyReplied =
+    (hasRepliedFlag && replies.length === 0) ||
+    (/(^|[_\s-])(posted|replied|sent)([_\s-]|$)/.test(replyStatus) &&
+      !/(failed|pending|not[_\s-]?posted)/.test(replyStatus)) ||
+    Boolean(
+      raw.youtube_reply_id ||
+      raw.youtubeReplyId ||
+      raw.posted_reply_id ||
+      raw.postedReplyId
+    ) ||
+    Boolean(aiReply.trim()) ||
+    hasChannelReply
   const awaitingReply =
     !explicitlyReplied &&
-    (raw.awaiting_reply === true ||
-      raw.awaitingReply === true ||
-      ['draft', 'failed'].includes(replyStatus)) &&
     (!channelId || authorChannelId !== channelId) &&
     canReply !== false &&
     Boolean(text.trim())
@@ -80,6 +106,7 @@ function toComment(raw, channelId) {
     likes: Number(inner.likes ?? inner.likeCount ?? inner.like_count ?? 0) || 0,
     isReplied: explicitlyReplied,
     awaitingReply,
+    canReply: canReply !== false,
     aiReply,
     authorChannelId,
     isAiReply:
@@ -88,9 +115,7 @@ function toComment(raw, channelId) {
       raw.ai_generated === true ||
       raw.aiGenerated === true,
     // Replies to this comment (same shape as a comment)
-    replies: Array.isArray(raw.replies)
-      ? raw.replies.map(reply => toComment(reply, channelId)).filter(Boolean)
-      : [],
+    replies,
   }
 }
 
@@ -110,12 +135,24 @@ function toComments(payload, channelId) {
   return list.map(comment => toComment(comment, channelId)).filter(Boolean)
 }
 
-function countAwaitingReplies(comments) {
-  return comments.reduce(
-    (total, comment) =>
-      total + Number(comment.awaitingReply) + countAwaitingReplies(comment.replies),
-    0,
-  )
+function flattenCommentTree(comments) {
+  return comments.flatMap(comment => [
+    comment,
+    ...flattenCommentTree(comment.replies),
+  ])
+}
+
+function getReplySnapshot(comments) {
+  return JSON.stringify(comments.map(comment => ({
+    id: comment.id,
+    author: comment.author,
+    text: comment.text,
+    published: comment.published,
+    isReplied: comment.isReplied,
+    aiReply: comment.aiReply,
+    isAiReply: comment.isAiReply,
+    replies: JSON.parse(getReplySnapshot(comment.replies)),
+  })))
 }
 
 function formatTime(value) {
@@ -182,6 +219,17 @@ function ReplyItem({ reply, parentComment, aiAuthor }) {
 
       <p className="mt-1 break-words text-sm text-gray-700">{reply.text}</p>
 
+      {reply.isReplied && (
+        <div className="ml-3 mt-3 rounded-lg border border-green-200 bg-white p-3 text-sm sm:ml-5">
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700">
+            <CheckCircle2 size={14} /> AI reply posted
+          </span>
+          <p className="mt-1 break-words text-gray-700">
+            {reply.aiReply || 'Reply posted on YouTube.'}
+          </p>
+        </div>
+      )}
+
       {reply.likes > 0 && (
         <span className="mt-2 inline-flex items-center gap-1 text-xs text-gray-500">
           <ThumbsUp size={13} /> {reply.likes}
@@ -221,7 +269,13 @@ function ReplyThread({ replies, parentComment, aiAuthor, nested = false }) {
   )
 }
 
-export function ReplySection({ channel, video }) {
+export function ReplySection({
+  channel,
+  video,
+  isVideoSaved = false,
+  commentFetchInterval,
+  onCommentFetchIntervalChange,
+}) {
   const channelId = channel?.id
   const videoId = video?.id
   const [refresh, setRefresh] = useState(0)
@@ -232,9 +286,15 @@ export function ReplySection({ channel, video }) {
     error: '',
   })
   const monitoringSavingRef = useRef(false)
+  const postingRef = useRef(false)
+  const seenCommentsRef = useRef({ key: '', ids: new Set() })
+  const previousEnabledRef = useRef(false)
   const [posting, setPosting] = useState(false)
   const [postError, setPostError] = useState('')
   const [postResult, setPostResult] = useState(null)
+  const postRefreshAttemptRef = useRef(null)
+  const postRefreshKeyRef = useRef('')
+  const postReplySnapshotRef = useRef('')
 
   useEffect(() => {
     const controller = new AbortController()
@@ -243,6 +303,15 @@ export function ReplySection({ channel, video }) {
         const response = await getCommentMonitoring({ signal: controller.signal })
         if (typeof response?.enabled !== 'boolean') {
           throw new Error('The server returned an invalid comment monitoring setting.')
+        }
+        const intervalMinutes = response.comment_fetch_interval_minutes
+        if (
+          intervalMinutes !== '' &&
+          Number.isInteger(Number(intervalMinutes)) &&
+          Number(intervalMinutes) >= 1 &&
+          Number(intervalMinutes) <= 1440
+        ) {
+          onCommentFetchIntervalChange?.(Number(intervalMinutes))
         }
         setMonitoringState({ loading: false, saving: false, enabled: response.enabled, error: '' })
         setRefresh(value => value + 1)
@@ -259,27 +328,113 @@ export function ReplySection({ channel, video }) {
 
     loadMonitoringPreference()
     return () => controller.abort()
-  }, [])
+  }, [onCommentFetchIntervalChange])
 
   const { data, error, loading } = useYoutubeResource(
-    !monitoringState.loading && channelId && videoId
+    channelId && videoId
       ? `/comments/${enc(channelId)}/${enc(videoId)}`
       : null,
     refresh,
-      COMMENTS_POLL_INTERVAL_MS,
+    getCommentFetchIntervalMs(commentFetchInterval),
   )
 
   const comments = useMemo(() => toComments(data, channelId), [data, channelId])
+  const allComments = useMemo(() => flattenCommentTree(comments), [comments])
   const replyCount = useMemo(
-    () => comments.reduce((total, comment) => total + comment.replies.length, 0),
-    [comments],
+    () => allComments.length - comments.length,
+    [allComments, comments.length],
   )
-  const unreplied = comments.filter(comment => !comment.isReplied).length
-  const awaitingReplyCount = useMemo(() => countAwaitingReplies(comments), [comments])
-  const allReplied = comments.length > 0 && unreplied === 0
+  const unreplied = allComments.filter(comment => !comment.isReplied).length
+  const awaitingReplyCount = useMemo(
+    () => allComments.filter(comment => comment.awaitingReply).length,
+    [allComments],
+  )
+  const allReplied = allComments.length > 0 && unreplied === 0
+
+  const generateAndPostReplies = useCallback(async () => {
+    if (!channelId || !videoId || postingRef.current) return
+
+    postingRef.current = true
+    postReplySnapshotRef.current = getReplySnapshot(comments)
+    setPosting(true)
+    setPostError('')
+    try {
+      const result = await youtubeRequest(
+        `/ai/${enc(channelId)}/${enc(videoId)}/generate-and-post-replies`,
+        { method: 'POST' },
+      )
+      setPostResult(result)
+      postRefreshAttemptRef.current = 0
+      postRefreshKeyRef.current = `${channelId}:${videoId}`
+      setRefresh(value => value + 1)
+    } catch (error) {
+      setPostError(
+        error instanceof YoutubeApiError && error.status === 401
+          ? 'Your session expired. Reconnect your YouTube channel.'
+          : error.message || 'Could not process saved comments. The background monitor will continue retrying.',
+      )
+    } finally {
+      postingRef.current = false
+      setPosting(false)
+    }
+  }, [channelId, comments, videoId])
+
+  useEffect(() => {
+    if (postRefreshAttemptRef.current === null || loading) return
+    if (postRefreshKeyRef.current !== `${channelId}:${videoId}`) {
+      postRefreshAttemptRef.current = null
+      return
+    }
+
+    if (data && getReplySnapshot(comments) !== postReplySnapshotRef.current) {
+      postRefreshAttemptRef.current = null
+      return
+    }
+
+    if (postRefreshAttemptRef.current >= 10) {
+      postRefreshAttemptRef.current = null
+      return
+    }
+
+    const timeout = globalThis.setTimeout(() => {
+      if (postRefreshAttemptRef.current === null) return
+      postRefreshAttemptRef.current += 1
+      setRefresh(value => value + 1)
+    }, 1500)
+
+    return () => globalThis.clearTimeout(timeout)
+  }, [channelId, comments, data, loading, refresh, videoId])
+
+  useEffect(() => {
+    const justEnabled = monitoringState.enabled && !previousEnabledRef.current
+    previousEnabledRef.current = monitoringState.enabled
+    if (justEnabled) {
+      generateAndPostReplies()
+      return
+    }
+
+    if (loading || !data || !channelId || !videoId) return
+
+    const key = `${channelId}:${videoId}`
+    const seen = seenCommentsRef.current
+    if (seen.key !== key) {
+      seenCommentsRef.current = { key, ids: new Set(allComments.map(comment => comment.id)) }
+      return
+    }
+
+    const newComments = allComments.filter(comment => !seen.ids.has(comment.id))
+    newComments.forEach(comment => seen.ids.add(comment.id))
+
+    const hasNewReplyableComment = newComments.some(comment => (
+      comment.awaitingReply
+    ))
+    if (monitoringState.enabled && hasNewReplyableComment) {
+      generateAndPostReplies()
+    }
+  }, [allComments, channelId, comments, data, generateAndPostReplies, loading, monitoringState.enabled, videoId])
 
   async function toggleAutomaticReplies() {
-    if (monitoringState.loading || monitoringSavingRef.current) return
+    if (!isVideoSaved || monitoringState.loading || monitoringSavingRef.current) return
 
     const wasEnabled = monitoringState.enabled
     const enabled = !wasEnabled
@@ -287,7 +442,9 @@ export function ReplySection({ channel, video }) {
 
     setMonitoringState({ loading: false, saving: true, enabled: false, error: '' })
     try {
-      const response = await setCommentMonitoring(enabled)
+      const response = await setCommentMonitoring(enabled, {
+        commentFetchIntervalMinutes: toCommentFetchIntervalMinutes(commentFetchInterval),
+      })
       if (typeof response?.enabled !== 'boolean' || response.enabled !== enabled) {
         throw new Error('The server did not confirm the requested comment monitoring setting.')
       }
@@ -296,25 +453,6 @@ export function ReplySection({ channel, video }) {
       monitoringSavingRef.current = false
       setPostError('')
       setPostResult(null)
-      if (enabled) {
-        setPosting(true)
-        try {
-          const result = await youtubeRequest(
-            `/ai/${enc(channelId)}/${enc(videoId)}/generate-and-post-replies`,
-            { method: 'POST' },
-          )
-          setPostResult(result)
-          setRefresh(value => value + 1)
-        } catch (error) {
-          setPostError(
-            error instanceof YoutubeApiError && error.status === 401
-              ? 'Your session expired. Reconnect your YouTube channel.'
-              : error.message || 'Could not process saved comments. The background monitor will continue retrying.',
-          )
-        } finally {
-          setPosting(false)
-        }
-      }
     } catch (err) {
       monitoringSavingRef.current = false
       setMonitoringState({
@@ -328,127 +466,94 @@ export function ReplySection({ channel, video }) {
     }
   }
 
-  // Safety net: Next is locked until a video is saved, but guard anyway
-  if (!channel || !video) {
-    return <p className="text-sm text-gray-500">Select and save a video in the previous step first.</p>
-  }
-
   return (
-    <section className="space-y-6">
-      {/* Heading */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">Operations Console</p>
-        <h1 className="mt-1 text-2xl font-bold text-gray-900">AI Command Center</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Review saved comments here. The background monitor processes eligible unreplied comments when enabled.
-        </p>
-      </div>
-
-      {/* Monitored video card */}
-      <section
-        aria-labelledby="monitored-video-title"
-        className="flex flex-wrap items-center gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
-      >
-        <img
-          src={`https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`}
-          alt=""
-          onError={e => { e.currentTarget.style.display = 'none' }}
-          className="h-20 w-36 rounded-lg bg-gray-100 object-cover"
-        />
-
-        <div className="min-w-0 flex-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Monitored video</span>
-          <h2 id="monitored-video-title" className="truncate text-lg font-semibold text-gray-900">
-            {video.title}
-          </h2>
-          <span className="text-xs text-gray-500">Video ID: {videoId}</span>
+    <div className="pt-4">
+      {!video ? (
+        <div className="flex min-h-[220px] flex-col items-center justify-center text-center">
+          <Video size={34} className="text-gray-300" aria-hidden="true" />
+          <h3 className="mt-3 font-semibold text-gray-800">Choose a video to view its comments</h3>
         </div>
-
-        <a
-          href={`https://www.youtube.com/watch?v=${enc(videoId)}`}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          Open on YouTube <ArrowUpRight size={15} />
-        </a>
-      </section>
-
-      {/* Video context */}
-      <section
-        aria-labelledby="video-context-title"
-        className="flex gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4"
-      >
-        <span className="text-blue-600" aria-hidden="true">
-          <Info size={18} />
-        </span>
-        <div>
-          <h2 id="video-context-title" className="text-sm font-semibold text-gray-900">
-            About this video
-          </h2>
-          <p className="text-sm text-gray-600">{video.description || 'No video context provided.'}</p>
-        </div>
-      </section>
-
-      {/* Comments and automatic reply controls */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="text-blue-600" aria-hidden="true">
-              <MessageSquare size={20} />
-            </span>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Comments</h2>
-              <p className="text-sm text-gray-500">
-                {monitoringState.enabled
-                  ? 'Monitoring is on. The background service checks comments and processes eligible unreplied comments.'
-                  : 'Monitoring is off. Saved comments and the awaiting reply count remain visible; no automatic checks or replies run.'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div aria-label="Comment and reply counts" className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
+      ) : (
+        <>
+          <div aria-label="Comment and reply counts" className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700">
                 {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
               </span>
-              <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
+              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
                 {replyCount} {replyCount === 1 ? 'thread reply' : 'thread replies'}
               </span>
-              <span className={`rounded-full px-3 py-1 text-sm font-medium ${
+              <span className={`rounded-full px-3 py-1 text-xs font-medium ${
                 awaitingReplyCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-700'
               }`}>
                 {awaitingReplyCount} awaiting AI reply
               </span>
             </div>
-            {monitoringState.enabled && posting && (
-              <span role="status" className="text-sm font-medium text-cyan-800">
-                Processing saved comments...
-              </span>
-            )}
             <button
               type="button"
-              onClick={toggleAutomaticReplies}
-              disabled={monitoringState.loading || monitoringState.saving}
-              aria-pressed={monitoringState.enabled}
-              role="switch"
-              aria-checked={monitoringState.enabled}
-              aria-label="Automatic comment monitoring"
-              className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 ${
-                monitoringState.enabled ? 'bg-green-600' : 'bg-gray-300'
-              }`}
+              onClick={() => setRefresh(value => value + 1)}
+              disabled={!isVideoSaved || loading || monitoringState.saving}
+              aria-label="Refresh comments"
+              className="ml-auto inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 shadow-sm transition hover:border-red-300 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
             >
-              <span
-                className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${
-                  monitoringState.enabled ? 'translate-x-7' : 'translate-x-1'
-                }`}
-              />
+              <RefreshCw size={15} aria-hidden="true" className={loading ? 'animate-spin' : ''} />
+              {loading ? 'Refreshing...' : 'Refresh comments'}
             </button>
-            <span className="min-w-8 text-sm font-semibold text-gray-700">
-              {monitoringState.loading ? 'Loading' : monitoringState.saving ? 'Saving' : monitoringState.enabled ? 'On' : 'Off'}
-            </span>
           </div>
-        </header>
+
+          <div className={`mt-4 flex items-center justify-between gap-4 rounded-2xl border p-4 shadow-sm transition-all sm:p-5 ${
+            monitoringState.enabled
+              ? 'border-red-300 bg-gradient-to-r from-red-50 via-white to-rose-50 shadow-red-100'
+              : 'border-red-100 bg-gradient-to-r from-red-50 via-white to-rose-50'
+          }`}>
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-100 bg-white shadow-sm">
+                <svg width="24" height="18" viewBox="0 0 24 18" aria-hidden="true">
+                  <rect x="1" y="1" width="22" height="16" rx="5" fill="#ff0033" />
+                  <path d="M10 5v8l6-4-6-4Z" fill="white" />
+                </svg>
+                <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-cyan-500 text-white shadow-sm" aria-hidden="true">
+                  <Sparkles size={10} strokeWidth={2.5} />
+                </span>
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-gray-900 sm:text-base">YouTube AI replies</p>
+                <p className="mt-0.5 text-xs leading-5 text-gray-600 sm:text-sm">
+                  Automatically checks new comments and posts eligible AI replies.
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 flex-col items-center">
+              <button
+                type="button"
+                onClick={toggleAutomaticReplies}
+                role="switch"
+                aria-checked={monitoringState.enabled}
+                aria-label="Automatic comment monitoring"
+                title={isVideoSaved ? undefined : 'Save this video selection to enable AI replies.'}
+                className="group flex flex-col items-center gap-1.5 rounded-xl p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
+                disabled={!isVideoSaved || monitoringState.loading || monitoringState.saving}
+              >
+                <span className={`relative inline-flex h-9 w-16 items-center rounded-full p-1 transition-colors ${
+                  monitoringState.enabled ? 'bg-red-600' : 'bg-gray-300 group-hover:bg-gray-400'
+                }`}>
+                  <span className={`h-7 w-7 rounded-full bg-white shadow-md transition-transform duration-200 ${
+                    monitoringState.enabled ? 'translate-x-7' : 'translate-x-0'
+                  }`} />
+                </span>
+                <span className={`text-xs font-bold ${
+                  monitoringState.enabled ? 'text-red-700' : 'text-gray-600'
+                }`}>
+                  {monitoringState.loading ? 'LOADING' : monitoringState.saving ? 'SAVING' : monitoringState.enabled ? 'ON' : 'TURN ON'}
+                </span>
+              </button>
+            </div>
+          </div>
+          {monitoringState.enabled && posting && (
+            <span role="status" className="mt-3 block text-sm font-medium text-cyan-800">
+              Processing saved comments...
+            </span>
+          )}
 
         {monitoringState.error && (
           <div role="alert" className="mt-4 flex gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -477,31 +582,51 @@ export function ReplySection({ channel, video }) {
           </div>
         )}
 
-        {allReplied && (
+        {monitoringState.enabled && allReplied && (
           <p role="status" className="mt-4 flex items-center gap-2 text-sm font-medium text-green-700">
             <CheckCircle2 size={18} /> All comments have been replied to.
           </p>
         )}
 
-        <div className="mt-5 space-y-4">
-            {loading && (
-              <p role="status" className="text-sm text-gray-500">
-                {comments.length > 0 ? 'Updating comments…' : 'Loading comments…'}
-              </p>
-            )}
-            {error && (
-              <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                <p>{error}</p>
-                <button
-                  type="button"
-                  onClick={() => setRefresh(n => n + 1)}
-                  className="mt-2 rounded-lg border border-red-300 bg-white px-3 py-1 font-medium hover:bg-red-100"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
+        {error && (
+          <div role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <p>{error}</p>
+            <button
+              type="button"
+              onClick={() => setRefresh(n => n + 1)}
+              className="mt-2 rounded-lg border border-red-300 bg-white px-3 py-1 font-medium hover:bg-red-100"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
+        {!isVideoSaved ? (
+          <div className="mt-5 flex min-h-[220px] flex-col items-center justify-center px-4 text-center">
+            <MessageSquare size={34} className="text-gray-300" aria-hidden="true" />
+            <h3 className="mt-3 font-semibold text-gray-800">Save this video to continue</h3>
+            <p className="mt-1 max-w-sm text-sm text-gray-500">
+              Save your selection to view comment counts and turn on AI-powered replies.
+            </p>
+          </div>
+        ) : !monitoringState.enabled ? (
+          null
+        ) : loading && !data ? (
+          <div className="mt-5 space-y-3" role="status" aria-label="Loading comments">
+            {Array.from({ length: 4 }, (_, index) => (
+              <article key={index} className="flex gap-3 rounded-xl border border-gray-200 p-4">
+                <div className="lh-youtube-skeleton h-9 w-9 shrink-0 rounded-full" />
+                <div className="flex-1 space-y-2 pt-1">
+                  <div className="lh-youtube-skeleton h-3 w-1/4 rounded-full" />
+                  <div className="lh-youtube-skeleton h-3 w-full rounded-full" />
+                  <div className="lh-youtube-skeleton h-3 w-3/5 rounded-full" />
+                  <div className="lh-youtube-skeleton ml-3 h-12 w-[85%] rounded-lg" />
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+        <div className="mt-5 space-y-4">
             {!loading && !error && comments.length === 0 && (
               <p className="text-sm text-gray-500">
                 No comments found for this video yet. As viewers comment on YouTube, they will appear here.
@@ -534,6 +659,11 @@ export function ReplySection({ channel, video }) {
                           Reply posted
                         </span>
                       )}
+                      {!comment.isReplied && comment.awaitingReply && (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                          Awaiting AI reply
+                        </span>
+                      )}
                     </header>
                     <p className="mt-1 break-words text-sm text-gray-700">{comment.text}</p>
                     {comment.likes > 0 && (
@@ -563,7 +693,9 @@ export function ReplySection({ channel, video }) {
               </article>
             ))}
         </div>
-      </div>
-    </section>
+        )}
+          </>
+        )}
+        </div>
   )
 }

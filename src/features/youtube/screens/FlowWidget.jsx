@@ -1,22 +1,61 @@
-// Controls the 5-step LeadHive flow: Channel -> Persona -> Video -> Reply -> Stats.
+// Controls the 2-step LeadHive flow: Channel & Persona -> Video, Replies & Analytics.
 // The current step lives in the URL (/flow?step=2) so refresh and the browser Back button work.
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import { ArrowUpRight, Play, Sparkles } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { ChannelSelection } from "../components/ChannelSelection";
-import { PersonaSelection } from "../components/PersonaSelection";
 import { VideoSelection } from "../components/VideoSelection";
 import { ReplySection } from "../components/ReplySection";
-import { StatsScreen } from "../components/StatsScreen";
 import { logoutUser } from "../api";
+import { useYoutubeResource } from "../hooks";
+import {
+  DEFAULT_COMMENT_FETCH_INTERVAL,
+  normalizeCommentFetchInterval,
+} from "../commentPolling";
 
-// Single source of truth: step order, nav label, and the component to render
+function VideoWorkspace({
+  channel,
+  video,
+  onVideoSaved,
+  commentFetchInterval,
+  onCommentFetchIntervalChange,
+}) {
+  const [previewVideo, setPreviewVideo] = useState(video);
+
+  return (
+    <VideoSelection
+      channel={channel}
+      video={video}
+      onVideoSaved={onVideoSaved}
+      onVideoPreview={setPreviewVideo}
+      commentsPanel={
+        video && previewVideo?.id === video.id
+          ? (
+            <ReplySection
+              key={video.id}
+              channel={channel}
+              video={video}
+              isVideoSaved
+              commentFetchInterval={commentFetchInterval}
+              onCommentFetchIntervalChange={onCommentFetchIntervalChange}
+            />
+          )
+          : (
+            <div className="flex min-h-[220px] flex-col items-center justify-center text-center">
+              <p className="font-semibold text-gray-800">
+                Select a video and add its description to view comments and replies.
+              </p>
+            </div>
+          )
+      }
+    />
+  );
+}
+
+// Single source of truth: the two user-facing steps and their navigation labels.
 const FLOW_STEPS = [
-  { key: "ChannelSelection", label: "Channel", Component: ChannelSelection },
-  { key: "PersonaSelection", label: "AI Persona", Component: PersonaSelection },
-  { key: "VideoSelection", label: "Video Library", Component: VideoSelection },
-  { key: "ReplySection", label: "Command Center", Component: ReplySection },
-  { key: "StatsScreen", label: "Analytics", Component: StatsScreen },
+  { key: "ChannelSelection", label: "Channel & Persona", Component: ChannelSelection },
+  { key: "VideoWorkspace", label: "Videos, Replies & Analytics", Component: VideoWorkspace },
 ];
 
 const LAST_STEP = FLOW_STEPS.length - 1;
@@ -47,13 +86,59 @@ function useStoredState(key) {
 export const FlowWidget = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const personaFormRef = useRef(null);
 
   // Channel picked in step 1: { id, name, subscribers, views }. Later steps read channel.id.
   const [channel, setChannel] = useStoredState("leadhive.flow.channel");
-  // Persona saved in step 2: { business_name, brand_tone, services, ai_rules }, or null when unsaved
+  const [channelRefresh, setChannelRefresh] = useState(0);
+  // Persona saved in step 1: { business_name, brand_tone, services, ai_rules }, or null when unsaved
   const [profile, setProfile] = useStoredState("leadhive.flow.profile");
-  // Video saved in step 3: { id, title, description }, or null when unsaved
+  // Video saved in step 2: { id, title, description }, or null when unsaved
   const [video, setVideo] = useStoredState("leadhive.flow.video");
+  const [commentFetchInterval, setCommentFetchInterval] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("leadhive.flow.comment-fetch-interval"));
+      return saved === null ? DEFAULT_COMMENT_FETCH_INTERVAL : normalizeCommentFetchInterval(saved);
+    } catch {
+      return DEFAULT_COMMENT_FETCH_INTERVAL;
+    }
+  });
+  const updateCommentFetchInterval = useCallback(value => {
+    const next = normalizeCommentFetchInterval(value);
+    setCommentFetchInterval(current => (
+      current.amount === next.amount && current.unit === next.unit
+        ? current
+        : next
+    ));
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "leadhive.flow.comment-fetch-interval",
+        JSON.stringify(commentFetchInterval),
+      );
+    } catch {
+      // The selected interval still applies until the page is closed.
+    }
+  }, [commentFetchInterval]);
+  const {
+    data: connectedChannels,
+    loading: checkingChannels,
+    status: channelsStatus,
+    error: channelsError,
+  } = useYoutubeResource("/auth/channels", channelRefresh);
+
+  const noConnectedChannels =
+    !checkingChannels &&
+    (channelsStatus === 401 ||
+      (!channelsError &&
+        (!Array.isArray(connectedChannels) || connectedChannels.length === 0)));
+  const hasVerifiedChannel = Boolean(
+    !checkingChannels &&
+    channel?.id &&
+    Array.isArray(connectedChannels) &&
+    connectedChannels.some(item => item.youtube_channel_id === channel.id),
+  );
 
   // Exit demo state
   const [exiting, setExiting] = useState(false);
@@ -61,15 +146,21 @@ export const FlowWidget = () => {
   // Bumped on exit so the active step remounts and refetches (otherwise step 1 keeps showing old channels)
   const [sessionKey, setSessionKey] = useState(0);
 
-  // Whether each step is done, in step order. Next stays disabled until the current step is ready.
-  // Reply and Stats are not gated yet; their gates are added as those steps get wired.
-  const stepReady = [Boolean(channel), Boolean(profile), Boolean(video), true, true];
+  // The workspace is reachable after channel/persona setup; video selection unlocks its tools inline.
+  const personaComplete = Boolean(
+    profile?.business_name?.trim() &&
+    profile?.brand_tone &&
+    profile?.services?.trim() &&
+    profile?.ai_rules?.trim(),
+  );
+  const stepReady = [hasVerifiedChannel && personaComplete, Boolean(video)];
 
   // Furthest step the user may be on: the first unfinished step (or the last step if all are done)
   const firstBlocked = stepReady.findIndex(ready => !ready);
-  const maxStep = firstBlocked === -1 ? LAST_STEP : firstBlocked;
+  const isRestoringChannel = checkingChannels && Boolean(channel?.id);
+  const maxStep = isRestoringChannel || firstBlocked === -1 ? LAST_STEP : firstBlocked;
 
-  // Step from the URL (1-based: ?step=2 is Persona). Missing or invalid means step 1.
+  // Step from the URL (1-based). Legacy URLs for steps 3/4 resolve to the second workspace step.
   const rawStep = searchParams.get("step");
   const requested = Number.isInteger(Number(rawStep)) && Number(rawStep) >= 1 ? Number(rawStep) - 1 : 0;
   const currentStep = Math.min(requested, LAST_STEP, maxStep);
@@ -77,10 +168,11 @@ export const FlowWidget = () => {
   // If the URL asks for a step that isn't reachable yet (typed by hand, or state was cleared),
   // correct it in place, replacing the history entry so Back doesn't loop
   useEffect(() => {
+    if (isRestoringChannel) return;
     if (rawStep !== null && rawStep !== String(currentStep + 1)) {
       setSearchParams({ step: String(currentStep + 1) }, { replace: true });
     }
-  }, [rawStep, currentStep, setSearchParams]);
+  }, [isRestoringChannel, rawStep, currentStep, setSearchParams]);
 
   // Scroll to the top whenever the step changes
   useEffect(() => {
@@ -89,12 +181,16 @@ export const FlowWidget = () => {
 
   const isFirst = currentStep === 0;
   const isLast = currentStep === LAST_STEP;
-  const canGoNext = !isLast && stepReady[currentStep];
+  const canGoNext = !isLast && (currentStep === 0 ? hasVerifiedChannel : stepReady[currentStep]);
 
   // Each step change adds a history entry, so the browser Back button returns to the previous step
   const goToStep = index => setSearchParams({ step: String(index + 1) });
 
   const nextStep = () => {
+    if (currentStep === 0 && !personaComplete) {
+      personaFormRef.current?.requestSubmit();
+      return;
+    }
     if (canGoNext) goToStep(currentStep + 1);
   };
 
@@ -116,7 +212,23 @@ export const FlowWidget = () => {
     setChannel(null);
     setProfile(null);
     setVideo(null);
+    setChannelRefresh(value => value + 1);
   };
+
+  useEffect(() => {
+    if (
+      checkingChannels ||
+      !Array.isArray(connectedChannels) ||
+      !channel?.id ||
+      connectedChannels.some(item => item.youtube_channel_id === channel.id)
+    ) {
+      return;
+    }
+
+    setChannel(null);
+    setProfile(null);
+    setVideo(null);
+  }, [checkingChannels, connectedChannels, channel?.id, setChannel, setProfile, setVideo]);
 
   const accountDeleted = () => {
     clearFlowState();
@@ -170,62 +282,67 @@ export const FlowWidget = () => {
             <img src="/leadhive-logo.png" alt="LeadHive AI" className="h-8 w-auto" />
           </Link>
           <span className="hidden h-6 w-px bg-gray-300 sm:block" aria-hidden="true" />
-          <span className="hidden whitespace-nowrap text-sm font-semibold text-gray-700 md:block">
-            YouTube Intelligence
-          </span>
-
-          <nav aria-label="YouTube Intelligence steps" className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-            {FLOW_STEPS.map((step, index) => {
-              const isActive = index === currentStep;
-              const reachable = index <= maxStep;
-              return (
-                <button
-                  key={step.key}
-                  type="button"
-                  onClick={() => reachable && !isActive && goToStep(index)}
-                  disabled={!reachable}
-                  aria-current={isActive ? "step" : undefined}
-                  className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-[#e5f9fc] text-[#168ca1]"
-                      : reachable
-                      ? "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                      : "cursor-not-allowed text-gray-400"
-                  }`}
-                >
-                  {step.label}
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* No-login interactive demo (sample video, simulated replies) */}
           <Link
-            to="/live-demo"
-            className="lh-primary-action inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium"
+            to="/flow?step=1"
+            className="hidden items-center gap-2 whitespace-nowrap text-sm font-semibold text-[#ff0033] transition hover:text-[#cc0029] focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 md:inline-flex"
           >
-            <Play size={14} className="fill-current" aria-hidden="true" />
-            <span className="hidden sm:inline">Interactive Demo</span>
-            <span className="sm:hidden">Demo</span>
-          </Link>
-          <Link
-            to="/interactive-demo-2"
-            className="lh-primary-action inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium"
-          >
-            <Sparkles size={14} aria-hidden="true" />
-            <span className="hidden sm:inline">Interactive Demo 2</span>
-            <span className="sm:hidden">Demo 2</span>
+            <svg width="18" height="14" viewBox="0 0 20 15" aria-hidden="true">
+              <rect width="20" height="15" rx="4" fill="#ff0033" />
+              <path d="M8 3.5v8l6-4-6-4Z" fill="white" />
+            </svg>
+            <span>YouTube Intelligence</span>
           </Link>
 
-          <button
-            type="button"
-            onClick={exitDemo}
-            disabled={exiting}
-            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-          >
-            <span>{exiting ? "Exiting..." : "Exit Demo"}</span>
-            <ArrowUpRight size={15} aria-hidden="true" />
-          </button>
+          {hasVerifiedChannel && (
+            <nav aria-label="YouTube Intelligence steps" className="flex min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto">
+              {FLOW_STEPS.map((step, index) => {
+                const isActive = index === currentStep;
+                const reachable = index <= maxStep;
+                return (
+                  <button
+                    key={step.key}
+                    type="button"
+                    onClick={() => reachable && !isActive && goToStep(index)}
+                    disabled={!reachable}
+                    aria-current={isActive ? "step" : undefined}
+                    className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      isActive
+                        ? "bg-[#e5f9fc] text-[#168ca1]"
+                        : reachable
+                        ? "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                        : "cursor-not-allowed text-gray-400"
+                    }`}
+                  >
+                    {step.label}
+                  </button>
+                );
+              })}
+            </nav>
+          )}
+
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            {noConnectedChannels && (
+              <Link
+                to="/interactive-demo-2"
+                className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-[#ff0033] transition hover:text-[#cc0029] focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
+              >
+                <svg width="18" height="14" viewBox="0 0 20 15" aria-hidden="true">
+                  <rect width="20" height="15" rx="4" fill="currentColor" />
+                  <path d="M8 3.5v8l6-4-6-4Z" fill="white" />
+                </svg>
+                <span>Interactive Demo</span>
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={exitDemo}
+              disabled={exiting}
+              className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              <span>{exiting ? "Exiting..." : "Exit Demo"}</span>
+              <ArrowUpRight size={15} aria-hidden="true" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -236,43 +353,45 @@ export const FlowWidget = () => {
           </p>
         )}
 
-        {/* Keep automation mounted across step navigation; render other steps on demand. */}
-        {currentStep !== 3 && (
-          <div>
-            <ActiveStep
-              key={sessionKey}
-              channel={channel}
-              onSelectChannel={selectChannel}
-              onDisconnected={clearFlowState}
-              onAccountDeleted={accountDeleted}
-              profile={profile}
-              onProfileSaved={setProfile}
-              video={video}
-              onVideoSaved={setVideo}
-            />
-          </div>
-        )}
-        <div hidden={currentStep !== 3}>
-          <ReplySection channel={channel} video={video} />
+        <div>
+          <ActiveStep
+            key={sessionKey}
+            channel={channel}
+            onSelectChannel={selectChannel}
+            onDisconnected={clearFlowState}
+            onAccountDeleted={accountDeleted}
+            profile={profile}
+            onProfileSaved={setProfile}
+            personaFormRef={personaFormRef}
+            onPersonaSavedAndContinue={() => goToStep(currentStep + 1)}
+            onPersonaNext={nextStep}
+            commentFetchInterval={commentFetchInterval}
+            onCommentFetchIntervalChange={updateCommentFetchInterval}
+            video={video}
+            onVideoSaved={setVideo}
+          />
         </div>
 
         {/* Navigation */}
         <div className="mt-6 flex justify-between">
-          <button
-            onClick={previousStep}
-            disabled={isFirst}
-            className="rounded bg-gray-200 px-4 py-2 disabled:opacity-50"
-          >
-            Back
-          </button>
+          {!isFirst && (
+            <button
+              onClick={previousStep}
+              className="rounded bg-gray-200 px-4 py-2"
+            >
+              Back
+            </button>
+          )}
 
-          <button
-            onClick={nextStep}
-            disabled={!canGoNext}
-            className="lh-primary-action rounded px-4 py-2 disabled:opacity-50"
-          >
-            Next
-          </button>
+          {!isLast && !isFirst && (
+            <button
+              onClick={nextStep}
+              disabled={!canGoNext}
+              className="lh-primary-action rounded px-4 py-2 disabled:opacity-50"
+            >
+              Next
+            </button>
+          )}
         </div>
       </div>
     </div>

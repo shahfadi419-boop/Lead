@@ -6,6 +6,12 @@ import { Building2, CheckCircle2, Sparkles } from 'lucide-react'
 import { YoutubeApiError, youtubeRequest } from '../api'
 import { useYoutubeResource } from '../hooks'
 import { FlowLoader } from './FlowLoader'
+import {
+  DEFAULT_COMMENT_FETCH_INTERVAL,
+  fromCommentFetchIntervalMinutes,
+  normalizeCommentFetchInterval,
+  toCommentFetchIntervalMinutes,
+} from '../commentPolling'
 
 // Max lengths match what the backend accepts today
 const NAME_MAX = 255
@@ -33,16 +39,32 @@ function Counter({ length, max }) {
   return <span className="mt-1 block text-xs text-gray-500">{length} / {max}</span>
 }
 
-export function PersonaSelection({ channel, profile, onProfileSaved }) {
+export function PersonaSelection({
+  channel,
+  profile,
+  onProfileSaved,
+  embedded = false,
+  formRef,
+  onSavedAndContinue,
+  onNext,
+  commentFetchInterval = DEFAULT_COMMENT_FETCH_INTERVAL,
+  onCommentFetchIntervalChange,
+}) {
   const channelId = channel?.id
   const [form, setForm] = useState(profile || BLANK)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [missingField, setMissingField] = useState('')
   const [refresh, setRefresh] = useState(0)
+  const [editing, setEditing] = useState(false)
+  const [intervalAmount, setIntervalAmount] = useState(String(commentFetchInterval.amount))
+  const [intervalUnit, setIntervalUnit] = useState(commentFetchInterval.unit)
 
-  // Only fetch when nothing is saved in this session yet (coming back via Back reuses the saved one)
+  // Don't reload the saved persona after the user starts editing it.
   const resource = useYoutubeResource(
-    channelId && !profile ? '/business-profile/' + encodeURIComponent(channelId) : null,
+    channelId && !editing
+      ? '/business-profile/' + encodeURIComponent(channelId)
+      : null,
     refresh,
   )
   const { data, error, status, loading } = resource
@@ -55,16 +77,58 @@ export function PersonaSelection({ channel, profile, onProfileSaved }) {
     const loaded = toForm(data)
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm(loaded)
-    if (loaded.business_name) onProfileSaved(loaded)
-  }, [data, onProfileSaved])
+    const source = data?.profile || data || {}
+    const intervalMinutes = source.comment_fetch_interval_minutes
+    const hasValidInterval =
+      intervalMinutes !== '' &&
+      Number.isInteger(Number(intervalMinutes)) &&
+      Number(intervalMinutes) >= 1 &&
+      Number(intervalMinutes) <= 1440
+    const savedInterval = hasValidInterval
+      ? fromCommentFetchIntervalMinutes(Number(intervalMinutes))
+      : commentFetchInterval
+    if (hasValidInterval) {
+      const interval = savedInterval
+      onCommentFetchIntervalChange?.(interval)
+      setIntervalAmount(String(interval.amount))
+      setIntervalUnit(interval.unit)
+    }
+    if (loaded.business_name) {
+      onProfileSaved({
+        ...loaded,
+        comment_fetch_interval_minutes: toCommentFetchIntervalMinutes(savedInterval),
+      })
+    }
+  }, [commentFetchInterval, data, onCommentFetchIntervalChange, onProfileSaved])
 
-  const isSaved = Boolean(profile)
+  const isSaved = Boolean(
+    profile?.business_name?.trim() &&
+    profile?.brand_tone &&
+    profile?.services?.trim() &&
+    profile?.ai_rules?.trim(),
+  )
   const servicesLength = form.services.trim().length
   const rulesLength = form.ai_rules.trim().length
 
   // Any edit makes the saved copy stale, so Next locks until the persona is saved again
   function update(key, value) {
     setForm(current => ({ ...current, [key]: value }))
+    setEditing(true)
+    if (missingField === key && value.trim()) setMissingField('')
+    if (profile) onProfileSaved(null)
+  }
+
+  function updateCommentFetchInterval(interval) {
+    const next = normalizeCommentFetchInterval(interval)
+    if (
+      next.amount === commentFetchInterval.amount &&
+      next.unit === commentFetchInterval.unit
+    ) {
+      return
+    }
+
+    onCommentFetchIntervalChange?.(next)
+    setEditing(true)
     if (profile) onProfileSaved(null)
   }
 
@@ -77,17 +141,38 @@ export function PersonaSelection({ channel, profile, onProfileSaved }) {
       brand_tone: form.brand_tone,
       services: form.services.trim(),
       ai_rules: form.ai_rules.trim(),
+      comment_fetch_interval_minutes: toCommentFetchIntervalMinutes(commentFetchInterval),
+    }
+    const firstMissing = [
+      ['business_name', payload.business_name],
+      ['brand_tone', payload.brand_tone],
+      ['services', payload.services],
+      ['ai_rules', payload.ai_rules],
+    ].find(([, value]) => !value)?.[0]
+
+    if (firstMissing) {
+      setMissingField(firstMissing)
+      setSaveError('')
+      requestAnimationFrame(() => {
+        const field = formRef?.current?.querySelector(`[name="${firstMissing}"]`)
+        field?.focus()
+        field?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
+      return
     }
 
     setSaving(true)
     setSaveError('')
+    setMissingField('')
     try {
       await youtubeRequest('/business-profile/save', {
         method: 'POST',
         body: { channel_id: channelId, ...payload },
       })
       setForm(payload)
+      setEditing(false)
       onProfileSaved(payload) // unlocks Next
+      if (embedded) onSavedAndContinue?.()
     } catch (err) {
       setSaveError(
         err instanceof YoutubeApiError && err.status === 401
@@ -107,15 +192,17 @@ export function PersonaSelection({ channel, profile, onProfileSaved }) {
   if (loading) return <FlowLoader message="Loading your persona..." />
 
   return (
-    <section className="space-y-6">
+    <section className={embedded ? 'space-y-4' : 'space-y-6'}>
       {/* Heading */}
-      <div>
+      {!embedded && (
+        <div>
         <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">AI Persona</p>
         <h1 className="mt-1 text-2xl font-bold text-gray-900">Configure your AI persona</h1>
         <p className="mt-2 text-sm text-gray-600">
           Define how LeadHive should represent your business in YouTube comment replies.
         </p>
-      </div>
+        </div>
+      )}
 
       {/* Failed to load a saved persona (not a 404) */}
       {loadError && (
@@ -131,19 +218,29 @@ export function PersonaSelection({ channel, profile, onProfileSaved }) {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <form
+        ref={formRef}
+        onSubmit={handleSubmit}
+        className={embedded ? 'grid gap-4' : 'grid gap-6 lg:grid-cols-[1.4fr_1fr]'}
+      >
         {/* Left: persona form */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
+        <div className={`rounded-2xl border border-gray-200 bg-white ${embedded ? 'p-5' : 'p-6'} shadow-sm`}>
+          <div className={embedded ? 'flex items-center justify-center text-center' : 'flex items-center'}>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Persona identity &amp; directives</h2>
-              <p className="text-sm text-gray-500">
-                Set the communication style, core offerings, and behavioral guardrails for AI engagement.
-              </p>
+              <h2 className="text-lg font-semibold text-gray-900">
+                {embedded ? 'Set the AI persona' : 'Persona identity & directives'}
+              </h2>
+              {!embedded && (
+                <p className="text-sm text-gray-500">
+                  Set the communication style, core offerings, and behavioral guardrails for AI engagement.
+                </p>
+              )}
             </div>
-            <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-              {channel.name}
-            </span>
+            {!embedded && (
+              <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                {channel.name}
+              </span>
+            )}
           </div>
 
           <div className="mt-5 space-y-5">
@@ -152,54 +249,125 @@ export function PersonaSelection({ channel, profile, onProfileSaved }) {
               <span className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 focus-within:border-blue-500">
                 <Building2 size={15} className="text-gray-400" aria-hidden="true" />
                 <input
+                  name="business_name"
                   maxLength={NAME_MAX}
                   value={form.business_name}
                   onChange={e => update('business_name', e.target.value)}
                   placeholder="e.g. Acme Studio"
-                  className="w-full bg-transparent text-sm outline-none"
+                  aria-invalid={missingField === 'business_name'}
+                  className={`w-full bg-transparent text-sm outline-none ${missingField === 'business_name' ? 'text-red-700' : ''}`}
                 />
               </span>
+              {missingField === 'business_name' && <span role="alert" className="mt-1 block text-xs font-medium text-red-600">Please enter a business or brand name.</span>}
             </label>
 
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-gray-700">Brand Tone</span>
               <select
+                name="brand_tone"
                 value={form.brand_tone}
                 onChange={e => update('brand_tone', e.target.value)}
-                className={fieldClass}
+                aria-invalid={missingField === 'brand_tone'}
+                className={`${fieldClass} ${missingField === 'brand_tone' ? 'border-red-500 ring-2 ring-red-100' : ''}`}
               >
                 <option value="">Select a conversational tone</option>
                 <option value="Professional & Helpful">Professional &amp; Helpful</option>
                 <option value="Casual & Friendly">Casual &amp; Friendly</option>
                 <option value="Witty & Humorous">Witty &amp; Humorous</option>
               </select>
+              {missingField === 'brand_tone' && <span role="alert" className="mt-1 block text-xs font-medium text-red-600">Please select a brand tone.</span>}
             </label>
 
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-gray-700">Core Services &amp; Offerings</span>
               <textarea
+                name="services"
                 rows={4}
                 maxLength={SERVICES_MAX}
                 value={form.services}
                 onChange={e => update('services', e.target.value)}
                 placeholder="Briefly describe what your business does and key solutions offered..."
-                className={fieldClass + ' resize-none'}
+                aria-invalid={missingField === 'services'}
+                className={`${fieldClass} resize-none ${missingField === 'services' ? 'border-red-500 ring-2 ring-red-100' : ''}`}
               />
+              {missingField === 'services' && <span role="alert" className="mt-1 block text-xs font-medium text-red-600">Please describe your core services.</span>}
               <Counter length={servicesLength} max={SERVICES_MAX} />
             </label>
 
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-gray-700">Rules &amp; Response Directives</span>
               <textarea
+                name="ai_rules"
                 rows={4}
                 maxLength={RULES_MAX}
                 value={form.ai_rules}
                 onChange={e => update('ai_rules', e.target.value)}
                 placeholder="E.g., Always direct pricing queries to the website; never make promises on timelines..."
-                className={fieldClass + ' resize-none'}
+                aria-invalid={missingField === 'ai_rules'}
+                className={`${fieldClass} resize-none ${missingField === 'ai_rules' ? 'border-red-500 ring-2 ring-red-100' : ''}`}
               />
+              {missingField === 'ai_rules' && <span role="alert" className="mt-1 block text-xs font-medium text-red-600">Please add rules or response directives.</span>}
               <Counter length={rulesLength} max={RULES_MAX} />
             </label>
+
+            {embedded && (
+              <div>
+                <span className="mb-1 block text-sm font-medium text-gray-700">Comment fetch interval</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    max={intervalUnit === 'hours' ? 24 : 1440}
+                    step="1"
+                    value={intervalAmount}
+                    onChange={event => {
+                      const nextAmount = event.target.value
+                      setIntervalAmount(nextAmount)
+                      if (nextAmount === '') return
+                      const next = normalizeCommentFetchInterval({
+                        amount: Number(nextAmount),
+                        unit: intervalUnit,
+                      })
+                      if (next.amount === Number(nextAmount) && next.unit === intervalUnit) {
+                        updateCommentFetchInterval(next)
+                      }
+                    }}
+                    onBlur={() => {
+                      const normalized = normalizeCommentFetchInterval({
+                        amount: Number(intervalAmount),
+                        unit: intervalUnit,
+                      })
+                      setIntervalAmount(String(normalized.amount))
+                      setIntervalUnit(normalized.unit)
+                      updateCommentFetchInterval(normalized)
+                    }}
+                    aria-label="Comment fetch interval amount"
+                    className={`${fieldClass} max-w-36`}
+                  />
+                  <select
+                    value={intervalUnit}
+                    onChange={event => {
+                      const nextUnit = event.target.value
+                      setIntervalUnit(nextUnit)
+                      const normalized = normalizeCommentFetchInterval({
+                        amount: Number(intervalAmount),
+                        unit: nextUnit,
+                      })
+                      setIntervalAmount(String(normalized.amount))
+                      updateCommentFetchInterval(normalized)
+                    }}
+                    aria-label="Comment fetch interval unit"
+                    className={`${fieldClass} max-w-36`}
+                  >
+                    <option value="minutes">Minutes</option>
+                    <option value="hours">Hours</option>
+                  </select>
+                </div>
+                <span className="mt-1 block text-xs leading-5 text-gray-500">
+                  Choose from 1 minute to 24 hours. Comments are fetched at this interval; reply processing stays unchanged.
+                </span>
+              </div>
+            )}
           </div>
 
           {saveError && (
@@ -208,24 +376,39 @@ export function PersonaSelection({ channel, profile, onProfileSaved }) {
             </p>
           )}
 
-          <div className="mt-6 flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={saving || isSaved}
-              className="lh-primary-action rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : isSaved ? 'Saved' : 'Save persona'}
-            </button>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            {!embedded && (
+              <button
+                type="submit"
+                disabled={saving || isSaved}
+                className="lh-primary-action rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : isSaved ? 'Saved' : 'Save persona'}
+              </button>
+            )}
             {isSaved && (
               <span className="inline-flex items-center gap-1 text-sm text-green-700">
                 <CheckCircle2 size={16} /> Persona saved. You can continue.
               </span>
             )}
+            {embedded && !isSaved && (
+              <div className="flex w-full flex-wrap items-center justify-between gap-3">
+                <span className="text-sm text-gray-500">Click Next to save your persona and continue.</span>
+                <button
+                  type="button"
+                  onClick={onNext}
+                  disabled={saving}
+                  className="lh-primary-action inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Next'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Right: live persona snapshot */}
-        <aside
+        {!embedded && <aside
           aria-label="AI persona live preview"
           className="h-fit rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
         >
@@ -270,7 +453,7 @@ export function PersonaSelection({ channel, profile, onProfileSaved }) {
               </dd>
             </div>
           </dl>
-        </aside>
+        </aside>}
       </form>
     </section>
   )
