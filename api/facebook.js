@@ -21,18 +21,15 @@ export default async function handler(request, response) {
     return response.status(500).json({ detail: 'FACEBOOK_BACKEND_URL must be a valid HTTP or HTTPS URL.' })
   }
 
-  const requestedPath = Array.isArray(request.query.path)
-    ? request.query.path.join('/')
-    : request.query.path || ''
-  const endpoint = requestedPath.split('/')[0]
+  const incomingUrl = new URL(request.url, 'http://localhost')
+  const endpoint = incomingUrl.searchParams.get('endpoint')
   if (!ALLOWED_ENDPOINTS.has(endpoint)) {
     return response.status(404).json({ detail: 'Facebook API endpoint not found.' })
   }
 
-  const targetUrl = new URL(`/${requestedPath}`, baseUrl)
-  const incomingUrl = new URL(request.url, 'http://localhost')
+  const targetUrl = new URL(`/${endpoint}`, baseUrl)
   incomingUrl.searchParams.forEach((value, key) => {
-    if (key !== 'path') targetUrl.searchParams.append(key, value)
+    if (key !== 'endpoint') targetUrl.searchParams.append(key, value)
   })
 
   try {

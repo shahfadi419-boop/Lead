@@ -57,7 +57,13 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api/facebook': {
           ...facebookBackendProxy,
-          rewrite: (requestPath) => requestPath.replace(/^\/api\/facebook/, ''),
+          rewrite: (requestPath) => {
+            const url = new URL(requestPath, 'http://localhost')
+            const endpoint = url.searchParams.get('endpoint')
+            if (!endpoint) return requestPath
+            url.searchParams.delete('endpoint')
+            return `/${endpoint}${url.search}`
+          },
         },
         '/api': backendProxy,
         '/auth': backendProxy,
