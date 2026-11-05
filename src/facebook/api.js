@@ -3,7 +3,7 @@ async function facebookRequest(path, { signal } = {}) {
   let data
 
   try {
-    response = await fetch(`/facebook-api${path}`, {
+    response = await fetch(`/api/facebook${path}`, {
       cache: 'no-store',
       headers: { Accept: 'application/json' },
       signal,

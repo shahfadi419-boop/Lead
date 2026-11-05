@@ -55,7 +55,10 @@ export default defineConfig(({ mode }) => {
 
     server: {
       proxy: {
-        '/facebook-api': facebookBackendProxy,
+        '/api/facebook': {
+          ...facebookBackendProxy,
+          rewrite: (requestPath) => requestPath.replace(/^\/api\/facebook/, ''),
+        },
         '/api': backendProxy,
         '/auth': backendProxy,
         '/business-profile': backendProxy,
