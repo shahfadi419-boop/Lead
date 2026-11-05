@@ -50,6 +50,12 @@ export default async function handler(request, response) {
     return response.send(Buffer.from(await backendResponse.arrayBuffer()))
   } catch (error) {
     console.error('[Facebook API proxy] Backend request failed', error)
-    return response.status(502).json({ detail: 'Could not reach the Facebook backend.' })
+    return response.status(502).json({
+      detail: 'Could not reach the Facebook backend.',
+      error: error instanceof Error ? error.name : 'UnknownError',
+      code: error && typeof error === 'object' && 'cause' in error
+        ? error.cause?.code || error.cause?.name || 'UnknownCause'
+        : 'UnknownCause',
+    })
   }
 }

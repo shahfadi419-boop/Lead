@@ -30,11 +30,11 @@ const inputClass =
 export function RegisterClient() {
   const navigate = useNavigate()
   const [form, setForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    company: '',
-    agree: false,
+    firstName: 'GoForeign',
+    lastName: 'Admin',
+    email: 'admin@goforeign.com',
+    company: 'GoForeign',
+    agree: true,
     platform: 'Facebook',
   })
   const [submitted, setSubmitted] = useState(false)
