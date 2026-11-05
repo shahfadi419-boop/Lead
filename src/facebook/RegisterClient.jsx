@@ -134,6 +134,14 @@ export function RegisterClient() {
             Review your details and connect to the dashboard.
           </p>
 
+          <div className="mt-5 flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+            <span>
+              <strong>Demo setup:</strong> These details are pre-configured to show you how the
+              connection process works.
+            </span>
+          </div>
+
           <div className="mt-5 flex items-start gap-2.5 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
             <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" aria-hidden="true" />
             <span>
