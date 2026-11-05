@@ -217,15 +217,15 @@ export function InteractiveDemo2() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
+      <header className="lh-app-header">
+        <div className="lh-app-header-inner">
           <Link
             to="/"
             onClick={() => sessionStorage.removeItem(AUTH_RETURN_KEY)}
             aria-label="Go to LeadHive home"
-            className="shrink-0"
+            className="lh-app-header-logo shrink-0"
           >
-            <img src="/leadhive-logo.png" alt="LeadHive AI" className="h-8 w-auto" />
+            <img src="/leadhive-logo.png" alt="LeadHive AI" />
           </Link>
           <span className="hidden h-6 w-px bg-gray-300 sm:block" aria-hidden="true" />
           <Link
@@ -268,6 +268,16 @@ export function InteractiveDemo2() {
               </button>
             </div>
           </nav>
+          <Link
+            to="/test-demo"
+            onClick={() => sessionStorage.removeItem(AUTH_RETURN_KEY)}
+            aria-label="All demo services"
+            title="All demo services"
+            className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft size={15} aria-hidden="true" />
+            <span className="hidden lg:inline">All services</span>
+          </Link>
           <Link
             to="/"
             onClick={() => sessionStorage.removeItem(AUTH_RETURN_KEY)}

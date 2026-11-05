@@ -9,23 +9,38 @@ export default defineConfig(({ mode }) => {
   if (!backendUrl) {
     throw new Error('BACKEND_URL must be set in the project .env file.')
   }
-
-  try {
-    const protocol = new URL(backendUrl).protocol
-    if (protocol !== 'http:' && protocol !== 'https:') {
-      throw new Error()
-    }
-  } catch {
-    throw new Error('BACKEND_URL must be a valid HTTP or HTTPS URL.')
+  const facebookBackendUrl = env.FACEBOOK_BACKEND_URL?.trim()
+  if (!facebookBackendUrl) {
+    throw new Error('FACEBOOK_BACKEND_URL must be set in the project .env file.')
   }
 
-  const backendProxy = {
-    target: backendUrl,
+  for (const [name, value] of [
+    ['BACKEND_URL', backendUrl],
+    ['FACEBOOK_BACKEND_URL', facebookBackendUrl],
+  ]) {
+    try {
+      const protocol = new URL(value).protocol
+      if (protocol !== 'http:' && protocol !== 'https:') {
+        throw new Error()
+      }
+    } catch {
+      throw new Error(`${name} must be a valid HTTP or HTTPS URL.`)
+    }
+  }
+
+  const createBackendProxy = (target) => ({
+    target,
     changeOrigin: true,
     secure: true,
     headers: {
       'X-Tunnel-Skip-AntiPhishing-Page': 'true',
+      'ngrok-skip-browser-warning': 'true',
     },
+  })
+  const backendProxy = createBackendProxy(backendUrl)
+  const facebookBackendProxy = {
+    ...createBackendProxy(facebookBackendUrl),
+    rewrite: (requestPath) => requestPath.replace(/^\/facebook-api/, ''),
   }
 
   return {
@@ -40,6 +55,7 @@ export default defineConfig(({ mode }) => {
 
     server: {
       proxy: {
+        '/facebook-api': facebookBackendProxy,
         '/api': backendProxy,
         '/auth': backendProxy,
         '/business-profile': backendProxy,

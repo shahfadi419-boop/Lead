@@ -7,6 +7,10 @@
       "dest": "https://core47.hostingmadeeasy.com:2083/"
     },
     {
+      "src": "^/facebook-api(?<path>/.*)?$",
+      "dest": "/api/facebook$path"
+    },
+    {
       "src": "^/auth(?<path>/.*)?$",
       "dest": "https://reveal-outshine-unloved.ngrok-free.dev/auth$path",
       "transforms": [

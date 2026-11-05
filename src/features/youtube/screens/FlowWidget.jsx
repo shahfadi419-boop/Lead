@@ -124,21 +124,15 @@ export const FlowWidget = () => {
   const {
     data: connectedChannels,
     loading: checkingChannels,
-    status: channelsStatus,
-    error: channelsError,
   } = useYoutubeResource("/auth/channels", channelRefresh);
 
-  const noConnectedChannels =
-    !checkingChannels &&
-    (channelsStatus === 401 ||
-      (!channelsError &&
-        (!Array.isArray(connectedChannels) || connectedChannels.length === 0)));
   const hasVerifiedChannel = Boolean(
     !checkingChannels &&
     channel?.id &&
     Array.isArray(connectedChannels) &&
     connectedChannels.some(item => item.youtube_channel_id === channel.id),
   );
+  const showInteractiveDemo = !checkingChannels && !hasVerifiedChannel;
 
   // Exit demo state
   const [exiting, setExiting] = useState(false);
@@ -272,14 +266,14 @@ export const FlowWidget = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header: brand, module label, step navigation, demo + exit */}
-      <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center gap-4 px-6 py-3">
+      <header className="lh-app-header">
+        <div className="lh-app-header-inner">
           <Link
             to="/"
             aria-label="LeadHive AI home"
-            className="shrink-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2"
+            className="lh-app-header-logo shrink-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2"
           >
-            <img src="/leadhive-logo.png" alt="LeadHive AI" className="h-8 w-auto" />
+            <img src="/leadhive-logo.png" alt="LeadHive AI" />
           </Link>
           <span className="hidden h-6 w-px bg-gray-300 sm:block" aria-hidden="true" />
           <Link
@@ -321,7 +315,7 @@ export const FlowWidget = () => {
           )}
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
-            {noConnectedChannels && (
+            {showInteractiveDemo && (
               <Link
                 to="/interactive-demo-2"
                 className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-[#ff0033] transition hover:text-[#cc0029] focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"

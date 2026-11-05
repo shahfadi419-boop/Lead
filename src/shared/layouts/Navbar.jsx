@@ -3,8 +3,8 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ArrowUpRight, Menu, X } from 'lucide-react'
 import { Link, useLocation } from 'react-router'
 
-// Test Demo opens step 1 of the flow, where visitors can try the interactive demo or connect their channel
-const DEMO_PATH = '/flow?step=1'
+// Test Demo opens the channel chooser before entering a specific demo.
+const DEMO_PATH = '/test-demo'
 
 const links = [
   ['Product', 'product'],

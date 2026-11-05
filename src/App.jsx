@@ -90,6 +90,21 @@ const InteractiveDemo2 = lazy(() =>
     default: m.InteractiveDemo2,
   })),
 );
+const DemoServiceSelection = lazy(() =>
+  import("./features/youtube/components/DemoServiceSelection").then((m) => ({
+    default: m.DemoServiceSelection,
+  })),
+);
+const RegisterClient = lazy(() =>
+  import("./facebook/RegisterClient").then((m) => ({
+    default: m.RegisterClient,
+  })),
+);
+const VisaDashboard = lazy(() =>
+  import("./facebook/visadashboard").then((m) => ({
+    default: m.VisaDashboard,
+  })),
+);
 const LegalPage = lazy(() =>
   import("@/features/legal/LegalPage").then((m) => ({ default: m.LegalPage })),
 );
@@ -147,7 +162,10 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomeRoute />} />
           <Route path="/contact" element={<MarketingApp />} />
-          <Route path="/test-demo" element={<Navigate to="/flow?step=1" replace />} />
+          <Route path="/test-demo" element={<DemoServiceSelection />} />
+          <Route path="/demo" element={<Navigate to="/test-demo" replace />} />
+          <Route path="/facebook" element={<RegisterClient />} />
+          <Route path="/visa/dashboard" element={<VisaDashboard />} />
           <Route path="/flow" element={<FlowWidget />} />
           <Route path="/interactive-demo-2" element={<InteractiveDemo2 />} />
           <Route path="/privacy" element={<LegalPage type="privacy" />} />

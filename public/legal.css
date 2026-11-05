@@ -2,10 +2,10 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: #f5f7fa; }
 .container { width: min(100% - 48px, 1160px); margin: auto; }
-.nav { position: sticky; top: 0; z-index: 10; height: 78px; display: flex; align-items: center; background: rgba(255,255,255,.96); border-bottom: 1px solid #e5eaf1; backdrop-filter: blur(16px); }
+.nav { position: sticky; top: 0; z-index: 10; height: 72px; display: flex; align-items: center; background: rgba(255,255,255,.96); border-bottom: 1px solid #e5eaf1; backdrop-filter: blur(16px); }
 .nav .container { display: flex; align-items: center; justify-content: space-between; }
 .nav .container::after { content: "Trust & Legal"; color: #168ca1; font-size: 12px; font-weight: 750; letter-spacing: .13em; text-transform: uppercase; }
-.nav img { display: block; width: auto; height: 34px; }
+.nav img { display: block; width: auto; height: 32px; }
 .hero { position: relative; overflow: hidden; padding: 56px 0 66px; color: #082b33; background: linear-gradient(118deg, #2bc1df 0%, #3dccdf 56%, #78e0eb 100%); border: 0; }
 .hero::before { content: ""; position: absolute; inset: 0; background: linear-gradient(112deg, transparent 0 58%, rgba(8,43,51,.09) 58% 60%, transparent 60%); }
 .hero::after { content: ""; position: absolute; right: -80px; bottom: -165px; width: 440px; height: 440px; border: 1px solid rgba(255,255,255,.48); border-radius: 50%; box-shadow: 0 0 0 52px rgba(255,255,255,.12), 0 0 0 104px rgba(255,255,255,.09); }
@@ -30,4 +30,4 @@ strong { color: #263c58; }
 a { color: #087f9d; font-weight: 600; text-decoration: underline; text-decoration-color: #79dcea; text-underline-offset: 3px; }
 a:hover { color: #045c77; text-decoration-color: currentColor; }
 footer { padding: 34px 0; border-top: 1px solid #e1e7ee; background: #fff; color: #6b7a8e; font-size: 13px; }
-@media (max-width:760px) { .container { width: min(100% - 32px,1160px); }.nav { height: 68px; }.nav img { height: 29px; }.nav .container::after { display:none; }.hero { padding: 58px 0 78px; }.hero h1 { font-size: clamp(38px,11vw,52px); }.hero::after { right:-200px; }.layout { display:block; padding:0 0 56px; }.aside { position:static; margin:26px 0 20px; padding:8px 0 8px 15px; }article { margin-top:0; padding:30px 22px 20px; border-radius:8px; }article > p:first-child { padding-bottom:18px; font-size:17px; }section { padding:27px 0 18px; }h2 { font-size:21px; } }
+@media (max-width:760px) { .container { width: min(100% - 32px,1160px); }.nav { height: 64px; }.nav img { height: 32px; }.nav .container::after { display:none; }.hero { padding: 58px 0 78px; }.hero h1 { font-size: clamp(38px,11vw,52px); }.hero::after { right:-200px; }.layout { display:block; padding:0 0 56px; }.aside { position:static; margin:26px 0 20px; padding:8px 0 8px 15px; }article { margin-top:0; padding:30px 22px 20px; border-radius:8px; }article > p:first-child { padding-bottom:18px; font-size:17px; }section { padding:27px 0 18px; }h2 { font-size:21px; } }
