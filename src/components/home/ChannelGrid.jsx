@@ -72,7 +72,10 @@ export function ChannelGrid({ onNavigate }) {
                   <button
                     onClick={() => {
                       analytics.track('conversation_selected', { channel: ch.id, source: 'channel_grid' });
-                      onNavigate('experience');
+                      onNavigate(
+                        ch.id === 'facebook' || ch.id === 'whatsapp' ? 'dashboard' : 'experience',
+                        ch.id,
+                      );
                     }}
                     className="text-xs font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
                   >
@@ -89,4 +92,3 @@ export function ChannelGrid({ onNavigate }) {
     </section>
   );
 }
-

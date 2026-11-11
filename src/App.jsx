@@ -10,9 +10,11 @@ import { FinalCTA } from './components/home/FinalCTA';
 import { ExperienceCentre } from './components/experience/ExperienceCentre';
 import { BookDemoPage } from './components/demo/BookDemoPage';
 import { PageLoader } from './components/common/PageLoader';
+import { SharedChannelDashboard } from './dashboards/SharedChannelDashboard';
 
 export function App() {
   const [activeRoute, setActiveRoute] = useState('home');
+  const [dashboardPlatform, setDashboardPlatform] = useState('facebook');
   const [isLoading, setIsLoading] = useState(true);
   // Booking modal removed; using dedicated booking page
 
@@ -21,7 +23,11 @@ export function App() {
     const handleUrlChange = () => {
       const path = window.location.pathname;
       const hash = window.location.hash;
-      if (path === '/book-demo' || hash === '#book-demo') {
+      if (path === '/dashboard') {
+        const platform = new URLSearchParams(window.location.search).get('platform');
+        setDashboardPlatform(platform === 'whatsapp' ? 'whatsapp' : 'facebook');
+        setActiveRoute('dashboard');
+      } else if (path === '/book-demo' || hash === '#book-demo') {
         setActiveRoute('booking');
       } else {
         setActiveRoute('home');
@@ -41,9 +47,15 @@ export function App() {
   }, []);
 
   // Update document title and URL when route changes
-  const handleNavigate = (route) => {
+  const handleNavigate = (route, platform) => {
     setActiveRoute(route);
-    if (route === 'experience') {
+    if (route === 'dashboard') {
+      const selectedPlatform = platform === 'whatsapp' ? 'whatsapp' : 'facebook';
+      setDashboardPlatform(selectedPlatform);
+      window.history.pushState(null, '', `/dashboard?platform=${selectedPlatform}`);
+      document.title = `${selectedPlatform === 'whatsapp' ? 'WhatsApp' : 'Facebook'} Lead Dashboard`;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (route === 'experience') {
       setActiveRoute('home');
       window.history.pushState(null, '', '#experience');
       document.title = 'LeadHive AI: Autonomous Sales Intelligence Platform';
@@ -52,15 +64,24 @@ export function App() {
       window.history.pushState(null, '', '#book-demo');
       document.title = 'Book a LeadHive AI Demo';
     } else {
-      window.history.pushState(null, '', '#');
+      window.history.pushState(null, '', window.location.pathname === '/dashboard' ? '/' : '#');
       document.title = 'LeadHive AI: Autonomous Sales Intelligence Platform';
     }
-    if (route !== 'experience') window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (route !== 'experience' && route !== 'dashboard') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleOpenBooking = () => {
     handleNavigate('booking');
   };
+
+  if (activeRoute === 'dashboard') {
+    return (
+      <SharedChannelDashboard
+        platform={dashboardPlatform}
+        onNavigate={handleNavigate}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans flex flex-col selection:bg-brand-500 selection:text-white">
@@ -127,4 +148,3 @@ export function App() {
 }
 
 export default App;
-
