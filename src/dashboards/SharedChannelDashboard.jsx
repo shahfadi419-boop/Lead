@@ -84,6 +84,10 @@ function LeadsTable({ data, loading, label }) {
     { label: 'Email', value: (lead) => lead.email },
     { label: 'Interest', value: (lead) => lead.visa_interest || lead.property_type },
     { label: 'Budget', value: (lead) => lead.budget || lead.budget_range },
+    {
+      label: 'Preferred Call Time',
+      value: (lead) => lead.preferred_call_time || lead.preferred_calling_time,
+    },
     { label: 'Platform', value: (lead) => lead.platform },
     { label: 'Status', value: (lead) => lead.lead_status || lead.stage },
   ];
