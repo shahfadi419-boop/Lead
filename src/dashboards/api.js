@@ -55,6 +55,52 @@ async function platformRequest(platform, endpoint, options = {}) {
   return data;
 }
 
+async function youtubeRequest(path, options = {}) {
+  let response;
+  let data;
+  const baseUrl = import.meta.env.DEV
+    ? '/youtube-api'
+    : import.meta.env.VITE_YOUTUBE_API_URL || '/api/youtube';
+  const query = new URLSearchParams(options.query);
+
+  try {
+    response = await fetch(`${baseUrl}/${path}${query.size ? `?${query}` : ''}`, {
+      cache: 'no-store',
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+      signal: options.signal,
+    });
+
+    const text = await response.text();
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = text;
+      }
+    }
+  } catch (error) {
+    if (options.signal?.aborted) throw error;
+    throw new Error(`Could not reach the YouTube backend for ${path}.`, { cause: error });
+  }
+
+  if (!response.ok) {
+    const detail = data && typeof data === 'object' && typeof data.detail === 'string'
+      ? `: ${data.detail}`
+      : '';
+    throw new Error(`YouTube backend request failed (${response.status})${detail}`);
+  }
+
+  return data;
+}
+
+export function getYouTubePinnedAnalytics(options) {
+  return youtubeRequest('analytics/pinned', {
+    ...options,
+    query: { max_comments: '100', max_replies: '50', ...options?.query },
+  });
+}
+
 export function getPlatformStats(platform, options) {
   return platformRequest(platform, 'stats', options);
 }

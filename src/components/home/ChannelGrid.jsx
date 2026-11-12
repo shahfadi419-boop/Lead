@@ -73,7 +73,7 @@ export function ChannelGrid({ onNavigate }) {
                     onClick={() => {
                       analytics.track('conversation_selected', { channel: ch.id, source: 'channel_grid' });
                       onNavigate(
-                        ch.id === 'facebook' || ch.id === 'whatsapp' ? 'dashboard' : 'experience',
+                        ['facebook', 'whatsapp', 'youtube'].includes(ch.id) ? 'dashboard' : 'experience',
                         ch.id,
                       );
                     }}

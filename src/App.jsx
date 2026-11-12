@@ -11,6 +11,7 @@ import { ExperienceCentre } from './components/experience/ExperienceCentre';
 import { BookDemoPage } from './components/demo/BookDemoPage';
 import { PageLoader } from './components/common/PageLoader';
 import { SharedChannelDashboard } from './dashboards/SharedChannelDashboard';
+import { YouTubeDashboard } from './dashboards/YouTubeDashboard';
 
 export function App() {
   const [activeRoute, setActiveRoute] = useState('home');
@@ -25,7 +26,9 @@ export function App() {
       const hash = window.location.hash;
       if (path === '/dashboard') {
         const platform = new URLSearchParams(window.location.search).get('platform');
-        setDashboardPlatform(platform === 'whatsapp' ? 'whatsapp' : 'facebook');
+        setDashboardPlatform(
+          platform === 'whatsapp' || platform === 'youtube' ? platform : 'facebook',
+        );
         setActiveRoute('dashboard');
       } else if (path === '/book-demo' || hash === '#book-demo') {
         setActiveRoute('booking');
@@ -50,10 +53,12 @@ export function App() {
   const handleNavigate = (route, platform) => {
     setActiveRoute(route);
     if (route === 'dashboard') {
-      const selectedPlatform = platform === 'whatsapp' ? 'whatsapp' : 'facebook';
+      const selectedPlatform = ['whatsapp', 'youtube'].includes(platform) ? platform : 'facebook';
       setDashboardPlatform(selectedPlatform);
       window.history.pushState(null, '', `/dashboard?platform=${selectedPlatform}`);
-      document.title = `${selectedPlatform === 'whatsapp' ? 'WhatsApp' : 'Facebook'} Lead Dashboard`;
+      document.title = selectedPlatform === 'youtube'
+        ? 'YouTube Comment Dashboard'
+        : `${selectedPlatform === 'whatsapp' ? 'WhatsApp' : 'Facebook'} Lead Dashboard`;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (route === 'experience') {
       setActiveRoute('home');
@@ -75,6 +80,10 @@ export function App() {
   };
 
   if (activeRoute === 'dashboard') {
+    if (dashboardPlatform === 'youtube') {
+      return <YouTubeDashboard onNavigate={handleNavigate} />;
+    }
+
     return (
       <SharedChannelDashboard
         platform={dashboardPlatform}

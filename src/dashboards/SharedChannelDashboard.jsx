@@ -33,15 +33,32 @@ function formatMetric(value) {
     : '—';
 }
 
-function getWhatsAppStats(stats) {
+function getChannelStats(stats, platform) {
   const platformStats = stats?.by_platform?.find(
-    (item) => item.platform?.toLowerCase() === 'whatsapp',
+    (item) => item.platform?.toLowerCase() === platform,
   );
   return {
     total_leads: platformStats?.leads,
-    engaged_users: stats?.engaged_users,
-    total_messages: stats?.total_messages,
+    engaged_users: platformStats?.engaged_users ?? stats?.engaged_users,
+    total_messages: platformStats?.total_messages ?? stats?.total_messages,
     qualified_leads: platformStats?.qualified,
+  };
+}
+
+function getChannelDashboardData(data, platform) {
+  const engagement = data.engagement?.by_platform?.find(
+    (item) => item.platform?.toLowerCase() === platform,
+  );
+  const hasCombinedEngagement = Boolean(data.engagement && !engagement);
+
+  return {
+    ...data,
+    stats: data.stats ? getChannelStats(data.stats, platform) : null,
+    leads: Array.isArray(data.leads)
+      ? data.leads.filter((lead) => lead.platform?.toLowerCase() === platform)
+      : data.leads,
+    engagement: engagement || data.engagement,
+    hasCombinedEngagement,
   };
 }
 
@@ -51,7 +68,7 @@ function getConnection(pageInfo, label) {
     : pageInfo?.facebook || pageInfo;
 }
 
-function MetricCards({ stats, loading, label }) {
+function MetricCards({ stats, loading, label, combined }) {
   return (
     <section
       aria-label={`${label} metrics`}
@@ -66,7 +83,11 @@ function MetricCards({ stats, loading, label }) {
             index > 1 ? 'max-md:border-t border-slate-200' : ''
           }`}
         >
-          <p className="text-sm text-slate-500">{metricLabel}</p>
+          <p className="text-sm text-slate-500">
+            {combined && ['engaged_users', 'total_messages'].includes(key)
+              ? `${metricLabel} (combined)`
+              : metricLabel}
+          </p>
           <p className="mt-2 text-2xl font-semibold leading-none text-slate-900">
             {loading && !stats ? 'Loading…' : formatMetric(stats?.[key])}
           </p>
@@ -150,31 +171,32 @@ function LeadsTable({ data, loading, label }) {
 
 function LiveExperienceLink({ label, href, platform }) {
   const isWhatsApp = platform === 'whatsapp';
+  const text = isWhatsApp
+    ? 'WhatsApp Experience Center'
+    : 'Facebook Experience Center';
 
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label={`Open ${label} live experience`}
-      className={`inline-flex min-h-10 w-[340px] max-w-full items-center justify-center gap-2 rounded-lg border px-4 py-2 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
+      aria-label={`Open ${label} ${text}`}
+      className={`inline-flex min-h-14 w-[420px] max-w-full items-center justify-center gap-3 rounded-xl border-2 px-5 py-3 text-center text-base font-bold shadow-md transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
         isWhatsApp
-          ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:border-emerald-300 hover:bg-emerald-100 focus-visible:ring-emerald-500'
-          : 'border-blue-200 bg-blue-50 text-blue-800 hover:border-blue-300 hover:bg-blue-100 focus-visible:ring-blue-500'
+          ? 'border-emerald-500 bg-[#25D366] text-white hover:border-emerald-600 hover:bg-emerald-600 focus-visible:ring-emerald-500'
+          : 'border-[#1877F2] bg-[#1877F2] text-white hover:border-[#166FE5] hover:bg-[#166FE5] focus-visible:ring-blue-500'
       }`}
     >
       <span
         aria-hidden="true"
-        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${
-          isWhatsApp ? 'bg-[#25D366]' : 'bg-[#1877F2]'
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg font-bold text-white ${
+          isWhatsApp ? 'bg-white/20' : 'bg-white/20'
         }`}
       >
         {isWhatsApp ? 'W' : 'f'}
       </span>
-      <span>
-        {isWhatsApp ? 'Click for Live Experience' : `Open ${label} Facebook Page for Live Experience`}
-      </span>
-      <ExternalLink size={14} className="shrink-0" aria-hidden="true" />
+      <span className="whitespace-nowrap">{text}</span>
+      <ExternalLink size={18} className="shrink-0" aria-hidden="true" />
     </a>
   );
 }
@@ -215,13 +237,25 @@ function SourceDashboard({ label, data, loading }) {
           Some {label} data could not be loaded. Check this backend connection and use Refresh to try again.
         </p>
       )}
+      {data.hasCombinedEngagement && (
+        <p className="text-xs text-slate-500">
+          Engagement and message totals are combined across Facebook and WhatsApp.
+        </p>
+      )}
 
-      <MetricCards stats={data.stats} loading={loading} label={label} />
+      <MetricCards
+        stats={data.stats}
+        loading={loading}
+        label={label}
+        combined={data.hasCombinedEngagement}
+      />
       <LeadsTable data={data} loading={loading} label={label} />
 
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         <div className="border-b border-slate-200 px-5 py-4">
-          <h3 className="text-sm font-semibold text-slate-900">{label} Engagement</h3>
+          <h3 className="text-sm font-semibold text-slate-900">
+            {label} Engagement{data.hasCombinedEngagement ? ' (combined)' : ''}
+          </h3>
           <p className="mt-1 text-xs text-slate-500">Engagement grouped by conversation depth</p>
         </div>
         <div className="space-y-4 px-5 py-6">
@@ -452,7 +486,7 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
             {activeView === 'visa' && (
               <SourceDashboard
                 label="Visa"
-                data={dashboard.visa || EMPTY_SOURCE}
+                data={getChannelDashboardData(dashboard.visa || EMPTY_SOURCE, 'facebook')}
                 loading={loading}
               />
             )}
@@ -467,13 +501,7 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
         ) : (
           <SourceDashboard
             label={title}
-            data={{
-              ...(dashboard.whatsapp || EMPTY_SOURCE),
-              stats: getWhatsAppStats(dashboard.whatsapp?.stats),
-              leads: Array.isArray(dashboard.whatsapp?.leads)
-                ? dashboard.whatsapp.leads.filter((lead) => lead.platform?.toLowerCase() === 'whatsapp')
-                : dashboard.whatsapp?.leads,
-            }}
+            data={getChannelDashboardData(dashboard.whatsapp || EMPTY_SOURCE, 'whatsapp')}
             loading={loading}
             liveExperienceUrl={null}
           />
