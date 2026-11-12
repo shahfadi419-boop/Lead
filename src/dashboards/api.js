@@ -62,9 +62,12 @@ async function youtubeRequest(path, options = {}) {
     ? '/youtube-api'
     : '/api/youtube';
   const query = new URLSearchParams(options.query);
+  const requestUrl = import.meta.env.DEV
+    ? `${baseUrl}/${path}${query.size ? `?${query}` : ''}`
+    : `${baseUrl}?${new URLSearchParams({ endpoint: path, ...options.query })}`;
 
   try {
-    response = await fetch(`${baseUrl}/${path}${query.size ? `?${query}` : ''}`, {
+    response = await fetch(requestUrl, {
       cache: 'no-store',
       credentials: 'include',
       headers: { Accept: 'application/json' },
