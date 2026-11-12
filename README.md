@@ -44,3 +44,7 @@ endpoint path such as `/stats`. Keep these values server-side; do not use `VITE_
 prefixes. Local development continues to use the proxies configured in `vite.config.js`.
 
 Production image assets belong in `public/`. Generated visual QA screenshots are ignored at the repository root.
+
+The Vercel rewrite in `vercel.json` serves the SPA entry point for client-side routes
+such as `/dashboard` when a page is refreshed, while leaving `/api/*` requests for
+the serverless backend proxy.
