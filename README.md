@@ -34,14 +34,16 @@ for each deployment environment and redeploy after changing them:
 
 | Variable | Backend |
 | --- | --- |
-| `FACEBOOK_API_URL` | Facebook/Visa backend base URL |
-| `WHATSAPP_API_URL` | WhatsApp backend base URL |
-| `REAL_ESTATE_API_URL` | Real Estate backend base URL |
-| `YOUTUBE_API_URL` | YouTube backend base URL |
+| `FACEBOOK_API_URL` or `VITE_FACEBOOK_API_URL` | Facebook/Visa backend base URL |
+| `WHATSAPP_API_URL` or `VITE_WHATSAPP_API_URL` | WhatsApp backend base URL |
+| `REAL_ESTATE_API_URL` or `VITE_REAL_ESTATE_API_URL` | Real Estate backend base URL |
+| `YOUTUBE_API_URL` or `VITE_YOUTUBE_API_URL` | YouTube backend base URL |
 
 Use the backend origin only (for example, `https://backend.example.com`), not an
-endpoint path such as `/stats`. Keep these values server-side; do not use `VITE_`
-prefixes. Local development continues to use the proxies configured in `vite.config.js`.
+endpoint path such as `/stats`. The non-`VITE_` names are preferred. Existing
+`VITE_` names are also accepted by the server-side proxy for compatibility; these
+values are backend URLs, not secrets. Local development continues to use the proxies
+configured in `vite.config.js`.
 
 Production image assets belong in `public/`. Generated visual QA screenshots are ignored at the repository root.
 
