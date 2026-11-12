@@ -5,13 +5,13 @@ async function platformRequest(platform, endpoint, options = {}) {
   const baseUrls = {
     facebook: import.meta.env.DEV
       ? '/facebook-api'
-      : import.meta.env.VITE_FACEBOOK_API_URL || '/api/facebook',
+      : '/api/facebook',
     'real-estate': import.meta.env.DEV
       ? '/real-estate-api'
-      : import.meta.env.VITE_REAL_ESTATE_API_URL || '/api/real-estate',
+      : '/api/real-estate',
     whatsapp: import.meta.env.DEV
       ? '/whatsapp-api'
-      : import.meta.env.VITE_WHATSAPP_API_URL || '/api/whatsapp',
+      : '/api/whatsapp',
   };
   const baseUrl = baseUrls[platform];
 
@@ -60,7 +60,7 @@ async function youtubeRequest(path, options = {}) {
   let data;
   const baseUrl = import.meta.env.DEV
     ? '/youtube-api'
-    : import.meta.env.VITE_YOUTUBE_API_URL || '/api/youtube';
+    : '/api/youtube';
   const query = new URLSearchParams(options.query);
 
   try {
