@@ -99,9 +99,10 @@ function MetricCards({ stats, loading, label, combined }) {
 
 function LeadsTable({ data, loading, label }) {
   const leads = Array.isArray(data.leads) ? data.leads : [];
+  const leadsLoading = loading && data.leads === null && !data.errors.leads;
   const columns = [
     { label: 'Name', value: (lead) => lead.name },
-    { label: 'Phone', value: (lead) => lead.phone },
+    { label: 'Phone', value: (lead) => lead.phone ? 'Hidden' : '—' },
     { label: 'Email', value: (lead) => lead.email },
     { label: 'Interest', value: (lead) => lead.visa_interest || lead.property_type },
     { label: 'Budget', value: (lead) => lead.budget || lead.budget_range },
@@ -154,7 +155,7 @@ function LeadsTable({ data, loading, label }) {
             )) : (
               <tr>
                 <td colSpan={columns.length} className="px-5 py-7 text-center text-sm text-slate-500">
-                  {loading
+                  {leadsLoading
                     ? `Loading ${label} leads…`
                     : data.errors.leads
                       ? `Could not load ${label} leads. Use Refresh to try again.`
@@ -274,7 +275,9 @@ function SourceDashboard({ label, data, loading }) {
             </div>
           )) : (
             <p className="text-sm text-slate-500">
-              {loading ? 'Loading engagement data…' : 'No engagement data yet.'}
+              {loading && data.engagement === null
+                ? 'Loading engagement data…'
+                : 'No engagement data yet.'}
             </p>
           )}
           <div className="grid grid-cols-3 gap-4 border-t border-slate-200 pt-5">
@@ -313,67 +316,94 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState('visa');
   const activeRequest = useRef(null);
+  const loadedSources = useRef(new Set());
 
-  const loadSource = useCallback(async (source, signal) => {
-    const results = await Promise.allSettled([
-      getPlatformStats(source, { signal }),
-      getPlatformLeads(source, { signal }),
-      getPlatformEngagement(source, { signal }),
-      getPlatformPageInfo(source, { signal }),
-    ]);
-    const keys = ['stats', 'leads', 'engagement', 'pageInfo'];
-    const next = { ...EMPTY_SOURCE, errors: {} };
+  const loadSource = useCallback(async (source, signal, force = false) => {
+    if (!force && loadedSources.current.has(source)) return;
 
-    results.forEach((result, index) => {
-      const key = keys[index];
-      if (result.status === 'fulfilled') {
-        next[key] = result.value;
-      } else if (!signal.aborted) {
-        next.errors[key] = result.reason;
-        console.error(`[${source} dashboard] Could not load ${key}`, result.reason);
+    const dashboardKey = source === 'facebook'
+      ? 'visa'
+      : source === 'real-estate'
+        ? 'realEstate'
+        : 'whatsapp';
+    const requests = [
+      ['stats', () => getPlatformStats(source, { signal })],
+      ['leads', () => getPlatformLeads(source, { signal })],
+      ['engagement', () => getPlatformEngagement(source, { signal })],
+      ['pageInfo', () => getPlatformPageInfo(source, { signal })],
+    ];
+
+    setDashboard((current) => ({
+      ...current,
+      [dashboardKey]: current[dashboardKey] || { ...EMPTY_SOURCE },
+    }));
+
+    let allRequestsSucceeded = true;
+    await Promise.all(requests.map(async ([key, request]) => {
+      try {
+        const value = await request();
+        if (signal.aborted) return;
+        setDashboard((current) => {
+          const sourceData = current[dashboardKey] || { ...EMPTY_SOURCE };
+          const errors = { ...sourceData.errors };
+          delete errors[key];
+          return {
+            ...current,
+            [dashboardKey]: { ...sourceData, [key]: value, errors },
+          };
+        });
+      } catch (error) {
+        if (signal.aborted) return;
+        allRequestsSucceeded = false;
+        console.error(`[${source} dashboard] Could not load ${key}`, error);
+        setDashboard((current) => {
+          const sourceData = current[dashboardKey] || { ...EMPTY_SOURCE };
+          return {
+            ...current,
+            [dashboardKey]: {
+              ...sourceData,
+              errors: { ...sourceData.errors, [key]: error },
+            },
+          };
+        });
       }
-    });
+    }));
 
-    return next;
+    if (!signal.aborted && allRequestsSucceeded) loadedSources.current.add(source);
   }, []);
-
-  const requestDashboard = useCallback(async (signal) => {
-    if (platform === 'facebook') {
-      const [visa, realEstate] = await Promise.all([
-        loadSource('facebook', signal),
-        loadSource('real-estate', signal),
-      ]);
-      return { visa, realEstate };
-    }
-
-    return { whatsapp: await loadSource('whatsapp', signal) };
-  }, [loadSource, platform]);
 
   useEffect(() => {
     const controller = new AbortController();
     activeRequest.current = controller;
-    setLoading(true);
-    requestDashboard(controller.signal).then((next) => {
+    const source = platform === 'facebook'
+      ? activeView === 'visa' ? 'facebook' : 'real-estate'
+      : 'whatsapp';
+    setLoading(!loadedSources.current.has(source));
+    loadSource(source, controller.signal).finally(() => {
       if (controller.signal.aborted) return;
-      setDashboard(next);
       setLoading(false);
+      if (activeRequest.current === controller) activeRequest.current = null;
     });
 
     return () => {
       controller.abort();
       if (activeRequest.current === controller) activeRequest.current = null;
     };
-  }, [requestDashboard]);
+  }, [activeView, loadSource, platform]);
 
   const refreshDashboard = async () => {
     activeRequest.current?.abort();
     const controller = new AbortController();
     activeRequest.current = controller;
     setLoading(true);
-    const next = await requestDashboard(controller.signal);
+    const source = platform === 'facebook'
+      ? activeView === 'visa' ? 'facebook' : 'real-estate'
+      : 'whatsapp';
+    loadedSources.current.delete(source);
+    await loadSource(source, controller.signal, true);
     if (controller.signal.aborted) return;
-    setDashboard(next);
     setLoading(false);
+    if (activeRequest.current === controller) activeRequest.current = null;
   };
 
   const title = PLATFORM_LABELS[platform];
@@ -468,7 +498,12 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
                 key={id}
                 type="button"
                 aria-pressed={activeView === id}
-                onClick={() => setActiveView(id)}
+                onClick={() => {
+                  setLoading(!loadedSources.current.has(
+                    id === 'visa' ? 'facebook' : 'real-estate',
+                  ));
+                  setActiveView(id);
+                }}
                 className={`min-h-10 rounded-lg px-4 text-sm font-medium transition ${
                   activeView === id
                     ? 'bg-blue-600 text-white'

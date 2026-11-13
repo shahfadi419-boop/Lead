@@ -4,7 +4,14 @@ import { ChannelIcon } from '../common/ChannelIcon';
 import { CHANNELS_INFO } from '../../data/scenarios';
 import { analytics } from '../../services/analytics';
 
+const CHANNEL_ORDER = ['facebook', 'whatsapp', 'youtube', 'instagram', 'tiktok', 'website'];
+const COMING_SOON_CHANNELS = new Set(['instagram', 'tiktok', 'website']);
+
 export function ChannelGrid({ onNavigate }) {
+  const channels = [...CHANNELS_INFO].sort(
+    (first, second) => CHANNEL_ORDER.indexOf(first.id) - CHANNEL_ORDER.indexOf(second.id),
+  );
+
   return (
     <section id="channels-section" className="py-20 bg-white border-b border-slate-100 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -24,13 +31,19 @@ export function ChannelGrid({ onNavigate }) {
 
         {/* 6-Channel Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-14">
-          {CHANNELS_INFO.map((ch) => {
+          {channels.map((ch) => {
+            const isComingSoon = COMING_SOON_CHANNELS.has(ch.id);
+
             return (
               <div
                 key={ch.id}
-                className="group relative bg-white border border-slate-200 hover:border-brand-300 rounded-2xl p-6 shadow-subtle hover:shadow-card transition-all flex flex-col justify-between"
+                className={`group relative rounded-2xl border p-6 transition-all flex flex-col justify-between ${
+                  isComingSoon
+                    ? 'border-slate-200 bg-slate-50 shadow-none'
+                    : 'border-slate-200 bg-white shadow-subtle hover:border-brand-300 hover:shadow-card'
+                }`}
               >
-                <div>
+                <div className={isComingSoon ? 'opacity-55 grayscale' : ''}>
                   {/* Card Header */}
                   <div className="flex items-center pb-4 border-b border-slate-100">
                     <div className="flex items-center gap-3">
@@ -68,20 +81,28 @@ export function ChannelGrid({ onNavigate }) {
 
                 {/* Card Action */}
                 <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-xs text-slate-500">Supported Workflow</span>
-                  <button
-                    onClick={() => {
-                      analytics.track('conversation_selected', { channel: ch.id, source: 'channel_grid' });
-                      onNavigate(
-                        ['facebook', 'whatsapp', 'youtube'].includes(ch.id) ? 'dashboard' : 'experience',
-                        ch.id,
-                      );
-                    }}
-                    className="text-xs font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
-                  >
-                    Test in Sandbox
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+                  {isComingSoon ? (
+                    <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-500">
+                      Coming Soon
+                    </span>
+                  ) : (
+                    <>
+                      <span className="text-xs text-slate-500">Supported Workflow</span>
+                      <button
+                        onClick={() => {
+                          analytics.track('conversation_selected', { channel: ch.id, source: 'channel_grid' });
+                          onNavigate(
+                            ['facebook', 'whatsapp', 'youtube'].includes(ch.id) ? 'dashboard' : 'experience',
+                            ch.id,
+                          );
+                        }}
+                        className="text-xs font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
+                      >
+                        Test in Sandbox
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             );
