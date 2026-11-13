@@ -45,8 +45,8 @@ export function Hero({ onNavigate }) {
   }, []);
 
   const openExperience = () => {
-    analytics.track('experience_started', { trigger: 'hero_primary_cta' });
-    onNavigate('experience');
+    analytics.track('experience_started', { trigger: 'hero_primary_cta', destination: 'sandboxes' });
+    onNavigate('sandboxes');
   };
 
   return (

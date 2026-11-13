@@ -34,8 +34,13 @@ export function App() {
         setActiveRoute('booking');
       } else {
         setActiveRoute('home');
-        if (path === '/experience' || hash === '#experience') {
-          window.setTimeout(() => document.getElementById('experience')?.scrollIntoView({ behavior: 'smooth' }), 100);
+        const anchorId = hash === '#channels-section'
+          ? 'channels-section'
+          : path === '/experience' || hash === '#experience'
+            ? 'experience'
+            : null;
+        if (anchorId) {
+          window.setTimeout(() => document.getElementById(anchorId)?.scrollIntoView({ behavior: 'smooth' }), 100);
         }
       }
     };
@@ -65,6 +70,11 @@ export function App() {
       window.history.pushState(null, '', '#experience');
       document.title = 'LeadHive AI: Autonomous Sales Intelligence Platform';
       window.setTimeout(() => document.getElementById('experience')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    } else if (route === 'sandboxes') {
+      setActiveRoute('home');
+      window.history.pushState(null, '', '#channels-section');
+      document.title = 'LeadHive AI: Channel Sandboxes';
+      window.setTimeout(() => document.getElementById('channels-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     } else if (route === 'booking') {
       window.history.pushState(null, '', '#book-demo');
       document.title = 'Book a LeadHive AI Demo';
@@ -72,7 +82,9 @@ export function App() {
       window.history.pushState(null, '', window.location.pathname === '/dashboard' ? '/' : '#');
       document.title = 'LeadHive AI: Autonomous Sales Intelligence Platform';
     }
-    if (route !== 'experience' && route !== 'dashboard') window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (route !== 'experience' && route !== 'sandboxes' && route !== 'dashboard') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleOpenBooking = () => {

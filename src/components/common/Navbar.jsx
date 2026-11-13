@@ -19,7 +19,7 @@ export function Navbar({ activeRoute, onNavigate, onOpenBooking }) {
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100 transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-18 py-3.5">
+        <div className="flex items-center justify-between h-18 py-3.5 lg:grid lg:grid-cols-[1fr_auto_1fr]">
           
           {/* Brand Logo */}
           <div className="flex items-center">
@@ -38,7 +38,7 @@ export function Navbar({ activeRoute, onNavigate, onOpenBooking }) {
           </div>
 
           {/* Desktop Navigation Links - Uniform Styling, No Overview, No special icons */}
-          <nav className="hidden lg:flex items-center space-x-1 xl:space-x-2 text-sm font-medium text-slate-600">
+          <nav className="hidden lg:flex items-center justify-self-center space-x-1 xl:space-x-2 text-sm font-medium text-slate-600">
             <button
               onClick={() => handleNavClick('home', 'channels-section')}
               className="px-3 py-2 rounded-lg transition-colors hover:text-slate-900 hover:bg-slate-50"
@@ -68,31 +68,8 @@ export function Navbar({ activeRoute, onNavigate, onOpenBooking }) {
             </button>
           </nav>
 
-          {/* Right Action CTA - Clean Single Action */}
-          <div className="hidden sm:flex items-center">
-            <button
-              onClick={() => {
-                analytics.track('experience_opened', { trigger: 'navbar_test_demo' });
-                handleNavClick('experience');
-              }}
-              className="px-4 py-2 text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-colors border border-slate-200"
-            >
-              Test Demo
-            </button>
-          </div>
-
           {/* Mobile menu toggle button */}
           <div className="flex lg:hidden items-center gap-2">
-            <button
-              onClick={() => {
-                analytics.track('experience_opened', { trigger: 'mobile_test_demo' });
-                handleNavClick('experience');
-              }}
-              className="sm:hidden px-3 py-1.5 text-xs font-semibold text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50"
-            >
-              Test Demo
-            </button>
-
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 focus:outline-none"
@@ -131,17 +108,6 @@ export function Navbar({ activeRoute, onNavigate, onOpenBooking }) {
             </button>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
-            <button
-              onClick={() => {
-                analytics.track('experience_opened', { trigger: 'mobile_menu_test_demo' });
-                handleNavClick('experience');
-              }}
-              className="w-full py-2.5 text-center text-sm font-semibold text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50"
-            >
-              Test Demo
-            </button>
-          </div>
         </div>
       )}
     </header>
