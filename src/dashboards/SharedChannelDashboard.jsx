@@ -33,32 +33,36 @@ function formatMetric(value) {
     : '—';
 }
 
+function formatCell(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  return String(value);
+}
+
 function getChannelStats(stats, platform) {
   const platformStats = stats?.by_platform?.find(
-    (item) => item.platform?.toLowerCase() === platform,
+    (item) => String(item.platform || '').toLowerCase() === platform,
   );
   return {
     total_leads: platformStats?.leads,
-    engaged_users: platformStats?.engaged_users ?? stats?.engaged_users,
-    total_messages: platformStats?.total_messages ?? stats?.total_messages,
+    engaged_users: platformStats?.engaged_users,
+    total_messages: platformStats?.total_messages,
     qualified_leads: platformStats?.qualified,
   };
 }
 
 function getChannelDashboardData(data, platform) {
   const engagement = data.engagement?.by_platform?.find(
-    (item) => item.platform?.toLowerCase() === platform,
+    (item) => String(item.platform || '').toLowerCase() === platform,
   );
-  const hasCombinedEngagement = Boolean(data.engagement && !engagement);
 
   return {
     ...data,
     stats: data.stats ? getChannelStats(data.stats, platform) : null,
     leads: Array.isArray(data.leads)
-      ? data.leads.filter((lead) => lead.platform?.toLowerCase() === platform)
+      ? data.leads.filter((lead) => String(lead.platform || '').toLowerCase() === platform)
       : data.leads,
-    engagement: engagement || data.engagement,
-    hasCombinedEngagement,
+    engagement,
+    hasUnsegmentedEngagement: Boolean(data.engagement && !engagement),
   };
 }
 
@@ -68,7 +72,7 @@ function getConnection(pageInfo, label) {
     : pageInfo?.facebook || pageInfo;
 }
 
-function MetricCards({ stats, loading, label, combined }) {
+function MetricCards({ stats, loading, label }) {
   return (
     <section
       aria-label={`${label} metrics`}
@@ -83,11 +87,7 @@ function MetricCards({ stats, loading, label, combined }) {
             index > 1 ? 'max-md:border-t border-slate-200' : ''
           }`}
         >
-          <p className="text-sm text-slate-500">
-            {combined && ['engaged_users', 'total_messages'].includes(key)
-              ? `${metricLabel} (combined)`
-              : metricLabel}
-          </p>
+          <p className="text-sm text-slate-500">{metricLabel}</p>
           <p className="mt-2 text-2xl font-semibold leading-none text-slate-900">
             {loading && !stats ? 'Loading…' : formatMetric(stats?.[key])}
           </p>
@@ -100,19 +100,47 @@ function MetricCards({ stats, loading, label, combined }) {
 function LeadsTable({ data, loading, label }) {
   const leads = Array.isArray(data.leads) ? data.leads : [];
   const leadsLoading = loading && data.leads === null && !data.errors.leads;
-  const columns = [
+  const sharedColumns = [
     { label: 'Name', value: (lead) => lead.name },
     { label: 'Phone', value: (lead) => lead.phone ? 'Hidden' : '—' },
     { label: 'Email', value: (lead) => lead.email },
-    { label: 'Interest', value: (lead) => lead.visa_interest || lead.property_type },
-    { label: 'Budget', value: (lead) => lead.budget || lead.budget_range },
-    {
-      label: 'Preferred Call Time',
-      value: (lead) => lead.preferred_call_time || lead.preferred_calling_time,
-    },
-    { label: 'Platform', value: (lead) => lead.platform },
-    { label: 'Status', value: (lead) => lead.lead_status || lead.stage },
   ];
+  const columns = label === 'Real Estate'
+    ? [
+      ...sharedColumns,
+      { label: 'Property Type', value: (lead) => lead.property_type },
+      { label: 'City / Area', value: (lead) => lead.city_or_area },
+      { label: 'Budget', value: (lead) => lead.budget_range || lead.budget },
+      { label: 'Preferred Call Time', value: (lead) => lead.preferred_call_time },
+      { label: 'Platform', value: (lead) => lead.platform },
+      { label: 'Stage', value: (lead) => lead.stage },
+      { label: 'Score', value: (lead) => lead.score },
+      { label: 'Messages', value: (lead) => lead.message_count },
+      {
+        label: 'Handoff Requested',
+        value: (lead) => typeof lead.handoff_requested === 'boolean'
+          ? lead.handoff_requested ? 'Yes' : 'No'
+          : lead.handoff_requested,
+      },
+    ]
+    : label === 'Visa'
+      ? [
+        ...sharedColumns,
+        { label: 'Visa Interest', value: (lead) => lead.visa_interest },
+        { label: 'Country', value: (lead) => lead.country },
+        { label: 'Preferred Call Time', value: (lead) => lead.preferred_calling_time || lead.preferred_call_time },
+        { label: 'Platform', value: (lead) => lead.platform },
+        { label: 'Status', value: (lead) => lead.lead_status || lead.stage },
+      ]
+      : [
+        ...sharedColumns,
+        { label: 'Interest', value: (lead) => lead.visa_interest || lead.property_type },
+        { label: 'Country', value: (lead) => lead.country },
+        { label: 'Budget', value: (lead) => lead.budget || lead.budget_range },
+        { label: 'Preferred Call Time', value: (lead) => lead.preferred_calling_time || lead.preferred_call_time },
+        { label: 'Platform', value: (lead) => lead.platform },
+        { label: 'Status', value: (lead) => lead.lead_status || lead.stage },
+      ];
 
   return (
     <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -148,7 +176,7 @@ function LeadsTable({ data, loading, label }) {
                     key={columnLabel}
                     className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 first:pl-5"
                   >
-                    {value(lead) || '—'}
+                    {formatCell(value(lead))}
                   </td>
                 ))}
               </tr>
@@ -238,9 +266,9 @@ function SourceDashboard({ label, data, loading }) {
           Some {label} data could not be loaded. Check this backend connection and use Refresh to try again.
         </p>
       )}
-      {data.hasCombinedEngagement && (
+      {data.hasUnsegmentedEngagement && (
         <p className="text-xs text-slate-500">
-          Engagement and message totals are combined across Facebook and WhatsApp.
+          Separate {label} engagement data is not available from the backend.
         </p>
       )}
 
@@ -248,14 +276,13 @@ function SourceDashboard({ label, data, loading }) {
         stats={data.stats}
         loading={loading}
         label={label}
-        combined={data.hasCombinedEngagement}
       />
       <LeadsTable data={data} loading={loading} label={label} />
 
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         <div className="border-b border-slate-200 px-5 py-4">
           <h3 className="text-sm font-semibold text-slate-900">
-            {label} Engagement{data.hasCombinedEngagement ? ' (combined)' : ''}
+            {label} Engagement
           </h3>
           <p className="mt-1 text-xs text-slate-500">Engagement grouped by conversation depth</p>
         </div>
@@ -277,7 +304,9 @@ function SourceDashboard({ label, data, loading }) {
             <p className="text-sm text-slate-500">
               {loading && data.engagement === null
                 ? 'Loading engagement data…'
-                : 'No engagement data yet.'}
+                : data.hasUnsegmentedEngagement
+                  ? `Separate ${label} engagement data is not available from the backend.`
+                  : 'No engagement data yet.'}
             </p>
           )}
           <div className="grid grid-cols-3 gap-4 border-t border-slate-200 pt-5">
