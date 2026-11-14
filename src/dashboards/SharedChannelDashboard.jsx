@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ExternalLink, RefreshCw } from 'lucide-react';
 import {
+  getVisaEngagement,
+  getVisaLeads,
+  getVisaStats,
   getPlatformEngagement,
   getPlatformLeads,
   getPlatformPageInfo,
@@ -158,7 +161,7 @@ function LeadsTable({ data, loading, label }) {
                 <th
                   key={columnLabel}
                   scope="col"
-                  className="whitespace-nowrap px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500 first:pl-5"
+                  className="whitespace-nowrap px-4 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500 first:pl-5"
                 >
                   {columnLabel}
                 </th>
@@ -230,7 +233,7 @@ function LiveExperienceLink({ label, href, platform }) {
   );
 }
 
-function SourceDashboard({ label, data, loading }) {
+function SourceDashboard({ label, data, loading, isVisaSource }) {
   const engagement = data.engagement || {};
   const buckets = Array.isArray(engagement.buckets) ? engagement.buckets : [];
   const connection = getConnection(data.pageInfo, label);
@@ -239,25 +242,29 @@ function SourceDashboard({ label, data, loading }) {
     <section aria-label={`${label} dashboard`} className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="text-xl font-bold text-slate-900">{label}</h2>
-        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-          data.errors.pageInfo
-            ? 'bg-red-50 text-red-700'
-            : connection?.connected
-              ? 'bg-emerald-50 text-emerald-700'
-              : data.pageInfo
-                ? 'bg-amber-50 text-amber-800'
-                : 'bg-slate-100 text-slate-600'
-        }`}>
-          {data.errors.pageInfo
-            ? 'Connection status unavailable'
-            : connection?.connected
-              ? 'Connected'
-              : data.pageInfo
-                ? 'Not connected'
-                : 'Checking connection…'}
-        </span>
-        {connection?.page_name && (
-          <span className="text-sm text-slate-500">{connection.page_name}</span>
+        {!isVisaSource && (
+          <>
+            <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+              data.errors.pageInfo
+                ? 'bg-red-50 text-red-700'
+                : connection?.connected
+                  ? 'bg-emerald-50 text-emerald-700'
+                  : data.pageInfo
+                    ? 'bg-amber-50 text-amber-800'
+                    : 'bg-slate-100 text-slate-600'
+            }`}>
+              {data.errors.pageInfo
+                ? 'Connection status unavailable'
+                : connection?.connected
+                  ? 'Connected'
+                  : data.pageInfo
+                    ? 'Not connected'
+                    : 'Checking connection…'}
+            </span>
+            {connection?.page_name && (
+              <span className="text-sm text-slate-500">{connection.page_name}</span>
+            )}
+          </>
         )}
       </div>
 
@@ -340,12 +347,39 @@ function SourceDashboard({ label, data, loading }) {
   );
 }
 
+function transformSsePayload(raw) {
+  return {
+    stats: {
+      by_platform: [{
+        platform: raw.stats.platform,
+        leads: raw.stats.total_leads,
+        engaged_users: raw.stats.engaged_users,
+        total_messages: raw.stats.total_messages,
+        qualified: raw.stats.total_leads,
+      }],
+    },
+    leads: raw.leads,
+    engagement: {
+      by_platform: [raw.engagement],
+      total_users: raw.engagement.total_users,
+      buckets: raw.engagement.buckets,
+    },
+    pageInfo: null,
+    errors: {},
+  };
+}
+
 export function SharedChannelDashboard({ platform, onNavigate }) {
   const [dashboard, setDashboard] = useState({});
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState('visa');
   const activeRequest = useRef(null);
   const loadedSources = useRef(new Set());
+
+  const source = platform === 'facebook'
+    ? activeView === 'visa' ? 'facebook' : 'real-estate'
+    : 'whatsapp';
+  const isVisaSource = source === 'facebook' || source === 'whatsapp';
 
   const loadSource = useCallback(async (source, signal, force = false) => {
     if (!force && loadedSources.current.has(source)) return;
@@ -355,12 +389,21 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
       : source === 'real-estate'
         ? 'realEstate'
         : 'whatsapp';
-    const requests = [
-      ['stats', () => getPlatformStats(source, { signal })],
-      ['leads', () => getPlatformLeads(source, { signal })],
-      ['engagement', () => getPlatformEngagement(source, { signal })],
-      ['pageInfo', () => getPlatformPageInfo(source, { signal })],
-    ];
+    // facebook (visa tab) and whatsapp → ai-lead-generator backend (port 8000)
+    // real-estate → existing devtunnel backend
+    const isVisa = source === 'facebook' || source === 'whatsapp';
+    const requests = isVisa
+      ? [
+          ['stats',      () => getVisaStats(source, { signal })],
+          ['leads',      () => getVisaLeads(source, { signal })],
+          ['engagement', () => getVisaEngagement(source, { signal })],
+        ]
+      : [
+          ['stats',      () => getPlatformStats(source, { signal })],
+          ['leads',      () => getPlatformLeads(source, { signal })],
+          ['engagement', () => getPlatformEngagement(source, { signal })],
+          ['pageInfo',   () => getPlatformPageInfo(source, { signal })],
+        ];
 
     setDashboard((current) => ({
       ...current,
@@ -404,9 +447,6 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
   useEffect(() => {
     const controller = new AbortController();
     activeRequest.current = controller;
-    const source = platform === 'facebook'
-      ? activeView === 'visa' ? 'facebook' : 'real-estate'
-      : 'whatsapp';
     setLoading(!loadedSources.current.has(source));
     loadSource(source, controller.signal).finally(() => {
       if (controller.signal.aborted) return;
@@ -420,14 +460,33 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
     };
   }, [activeView, loadSource, platform]);
 
+  // SSE live updates — visa sources only (facebook visa tab + whatsapp)
+  useEffect(() => {
+    if (!isVisaSource) return;
+    const dashboardKey = source === 'facebook' ? 'visa' : 'whatsapp';
+    const es = new EventSource(`/visa-api/dashboard/stream?platform=${source}`);
+
+    es.onmessage = (event) => {
+      try {
+        setDashboard((current) => ({
+          ...current,
+          [dashboardKey]: transformSsePayload(JSON.parse(event.data)),
+        }));
+      } catch (e) {
+        console.error('[SSE] parse error', e);
+      }
+    };
+
+    es.onerror = () => console.warn('[SSE] connection error, browser will retry');
+
+    return () => es.close();
+  }, [source, isVisaSource]);
+
   const refreshDashboard = async () => {
     activeRequest.current?.abort();
     const controller = new AbortController();
     activeRequest.current = controller;
     setLoading(true);
-    const source = platform === 'facebook'
-      ? activeView === 'visa' ? 'facebook' : 'real-estate'
-      : 'whatsapp';
     loadedSources.current.delete(source);
     await loadSource(source, controller.signal, true);
     if (controller.signal.aborted) return;
@@ -552,6 +611,7 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
                 label="Visa"
                 data={getChannelDashboardData(dashboard.visa || EMPTY_SOURCE, 'facebook')}
                 loading={loading}
+                isVisaSource
               />
             )}
             {activeView === 'realEstate' && (
@@ -567,7 +627,7 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
             label={title}
             data={getChannelDashboardData(dashboard.whatsapp || EMPTY_SOURCE, 'whatsapp')}
             loading={loading}
-            liveExperienceUrl={null}
+            isVisaSource
           />
         )}
       </div>

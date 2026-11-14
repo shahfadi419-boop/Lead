@@ -114,7 +114,7 @@ export function YouTubeDashboard({ onNavigate }) {
             className="overflow-hidden rounded-xl border border-slate-200 bg-white"
           >
             <div className="border-b border-slate-200 px-5 py-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-red-600">Channel</p>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-red-600">Channel</p>
               <h2 className="mt-1 break-words text-lg font-bold text-slate-900">
                 {analytics?.channel_name || (loading ? 'Loading channel…' : 'Pinned channel')}
               </h2>
@@ -143,7 +143,7 @@ export function YouTubeDashboard({ onNavigate }) {
                 <Play className="h-4 w-4 fill-current" aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wide text-red-600">Pinned video</p>
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-red-600">Pinned video</p>
                 <h2 className="mt-1 break-words text-lg font-bold text-slate-900">
                   {analytics?.video_title || (loading ? 'Loading video…' : 'Pinned video')}
                 </h2>

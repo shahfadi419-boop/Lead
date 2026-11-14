@@ -45,7 +45,7 @@ export function HumanCenteredOutcome() {
                 <div key={title} className="group flex gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan-200 hover:shadow-[0_22px_45px_-30px_rgba(8,145,178,0.3)]">
                   <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 ${tone}`}><Icon className="h-5 w-5" /></div>
                   <div>
-                    <div className="flex items-center gap-2"><span className="font-mono text-[10px] font-bold text-slate-300">0{index + 1}</span><h3 className="text-sm font-bold text-slate-900">{title}</h3></div>
+                    <div className="flex items-center gap-2"><span className="text-[10px] font-bold tracking-[0.12em] text-slate-300">0{index + 1}</span><h3 className="text-sm font-bold text-slate-900">{title}</h3></div>
                     <p className="mt-1 text-sm leading-relaxed text-slate-500">{detail}</p>
                   </div>
                 </div>

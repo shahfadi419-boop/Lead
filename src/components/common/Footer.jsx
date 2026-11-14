@@ -19,19 +19,19 @@ export function Footer({ onNavigate }) {
               Autonomous Sales Intelligence Platform. Turning multi-channel customer conversations into qualified, prioritized sales opportunities so your team acts on the leads that matter.
             </p>
             <div className="pt-2">
-              <p className="text-xs uppercase tracking-wider font-semibold text-brand-400">Brand Promise</p>
+              <p className="text-[11px] uppercase tracking-[0.15em] font-bold text-brand-400">Brand Promise</p>
               <p className="text-sm font-medium text-white mt-1">Your Team Acts on the Opportunities That Matter.</p>
             </div>
           </div>
 
           {/* Platform Navigation */}
           <div>
-            <h4 className="text-sm font-semibold text-white tracking-wider uppercase mb-4">Platform</h4>
+            <h4 className="text-[11px] font-bold text-white tracking-[0.15em] uppercase mb-5">Platform</h4>
             <ul className="space-y-2.5 text-sm">
               <li>
                 <button onClick={() => onNavigate('experience')} className="text-slate-400 hover:text-brand-300 flex items-center gap-1">
                   AI Experience Centre
-                  <span className="text-[10px] bg-brand-500/20 text-brand-300 px-1.5 py-0.2 rounded font-mono">LIVE</span>
+                  <span className="text-[9px] bg-brand-500/20 text-brand-300 px-1.5 py-0.5 rounded font-bold uppercase tracking-[0.1em]">LIVE</span>
                 </button>
               </li>
               <li>
@@ -51,7 +51,7 @@ export function Footer({ onNavigate }) {
 
           {/* Industry Solutions */}
           <div>
-            <h4 className="text-sm font-semibold text-white tracking-wider uppercase mb-4">Industries</h4>
+            <h4 className="text-[11px] font-bold text-white tracking-[0.15em] uppercase mb-5">Industries</h4>
             <ul className="space-y-2.5 text-sm">
               <li>
                 <button onClick={() => { onNavigate('experience'); }} className="text-slate-400 hover:text-white">Real Estate & Developers</button>
@@ -84,9 +84,9 @@ export function Footer({ onNavigate }) {
           <div className="flex items-center gap-4 text-slate-400 whitespace-nowrap">
             <span>© {new Date().getFullYear()} LeadHive AI</span>
             <span>•</span>
-            <span className="hover:text-white cursor-pointer">Privacy Policy</span>
-            <span>•</span>
-            <span className="hover:text-white cursor-pointer">Terms of Service</span>
+            <button className="hover:text-white transition-colors focus:outline-none focus-visible:text-white">Privacy Policy</button>
+            <span aria-hidden="true">•</span>
+            <button className="hover:text-white transition-colors focus:outline-none focus-visible:text-white">Terms of Service</button>
           </div>
         </div>
       </div>

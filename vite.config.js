@@ -49,6 +49,11 @@ export default defineConfig({
           });
         },
       },
+      '/visa-api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/visa-api/, ''),
+      },
     },
   }
 })

@@ -98,10 +98,10 @@ export function OperatingModel() {
                 >
                   <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-400 via-sky-500 to-emerald-400 transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-0'}`} />
                   <div className="flex items-start justify-between gap-3">
-                    <span className={`flex h-12 w-12 items-center justify-center rounded-2xl border transition-all duration-500 ${isActive ? 'border-cyan-300 bg-cyan-500 text-white shadow-[0_0_30px_rgba(6,182,212,0.32)]' : 'border-slate-200 bg-slate-50 text-cyan-600 group-hover:border-cyan-200 group-hover:bg-cyan-50'}`}>
+                    <span className={`flex h-12 w-12 items-center justify-center rounded-2xl border transition-all duration-500 ${isActive ? 'border-brand-300 bg-brand-500 text-white shadow-[0_0_30px_rgba(43,191,221,0.32)]' : 'border-slate-200 bg-slate-50 text-cyan-600 group-hover:border-cyan-200 group-hover:bg-cyan-50'}`}>
                       <Icon className="h-5 w-5" />
                     </span>
-                    <span className="font-mono text-xs font-bold tracking-[0.16em] text-slate-400">{step.number}</span>
+                    <span className="text-xs font-bold tracking-[0.16em] text-slate-400">{step.number}</span>
                   </div>
 
                   <div className="mt-8">

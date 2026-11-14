@@ -728,7 +728,7 @@ export function ExperienceCentre({ initialIndustryId = 'real-estate', onOpenBook
             <div className="bg-white border border-slate-200 rounded-2xl shadow-subtle overflow-hidden">
               <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/60">
                 <h3 className="text-sm font-bold text-slate-900">Prioritized Opportunity Table</h3>
-                <span className="text-xs font-mono text-slate-400">Click any row to view full dossier</span>
+                <span className="text-xs text-slate-400">Click any row to view full dossier</span>
               </div>
 
               <div className="overflow-x-auto">
@@ -912,7 +912,7 @@ export function ExperienceCentre({ initialIndustryId = 'real-estate', onOpenBook
                 </div>
 
                 <div className="text-right">
-                  <span className="text-xs font-mono text-slate-500">Channel: WhatsApp Business</span>
+                  <span className="text-xs text-slate-500">Channel: WhatsApp Business</span>
                   <p className="text-xs text-emerald-600 font-semibold mt-0.5">Qualification Level: High (95%)</p>
                 </div>
               </div>
@@ -1046,7 +1046,7 @@ export function ExperienceCentre({ initialIndustryId = 'real-estate', onOpenBook
                     Custom live walkthrough with your industry channels, custom brand guidelines and CRM integrations.
                   </p>
                 </div>
-                <span className="text-[11px] font-mono text-brand-200 mt-4">Takes 20 minutes</span>
+                <span className="text-[11px] text-brand-200 mt-4">Takes 20 minutes</span>
               </button>
 
               <button
@@ -1065,7 +1065,7 @@ export function ExperienceCentre({ initialIndustryId = 'real-estate', onOpenBook
                     Discuss your volume, existing channels, team size, and tailored sales qualification criteria.
                   </p>
                 </div>
-                <span className="text-[11px] font-mono text-slate-400 mt-4">Tailored proposal</span>
+                <span className="text-[11px] text-slate-400 mt-4">Tailored proposal</span>
               </button>
             </div>
 

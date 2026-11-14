@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, X } from 'lucide-react';
+import { ArrowRight, Menu, X } from 'lucide-react';
 import { analytics } from '../../services/analytics';
 
 export function Navbar({ activeRoute, onNavigate, onOpenBooking }) {
@@ -19,7 +19,7 @@ export function Navbar({ activeRoute, onNavigate, onOpenBooking }) {
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100 transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-18 py-3.5 lg:grid lg:grid-cols-[1fr_auto_1fr]">
+        <div className="flex items-center justify-between py-3.5 lg:grid lg:grid-cols-[1fr_auto_1fr]">
           
           {/* Brand Logo */}
           <div className="flex items-center">
@@ -68,12 +68,20 @@ export function Navbar({ activeRoute, onNavigate, onOpenBooking }) {
             </button>
           </nav>
 
-          {/* Mobile menu toggle button */}
-          <div className="flex lg:hidden items-center gap-2">
+          {/* Desktop CTA + Mobile menu toggle */}
+          <div className="flex items-center justify-end gap-3">
+            <button
+              onClick={() => onOpenBooking('Navbar')}
+              className="hidden lg:inline-flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2 text-[13px] font-bold text-white transition-all hover:-translate-y-px hover:bg-brand-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2"
+            >
+              Book a Demo
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 focus:outline-none"
+              className="lg:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 focus:outline-none"
               aria-label="Toggle menu"
+              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -83,7 +91,7 @@ export function Navbar({ activeRoute, onNavigate, onOpenBooking }) {
 
       {/* Mobile Menu Drawer */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-b border-slate-200 bg-white px-4 pt-3 pb-6 space-y-3 animate-fadeIn shadow-lg">
+        <div className="lg:hidden border-b border-slate-200 bg-white px-4 pt-3 pb-5 space-y-3 animate-fadeIn shadow-lg">
           <div className="flex flex-col space-y-1">
             <button
               onClick={() => handleNavClick('home', 'channels-section')}
@@ -107,7 +115,14 @@ export function Navbar({ activeRoute, onNavigate, onOpenBooking }) {
               Industries
             </button>
           </div>
-
+          <div className="pt-2 border-t border-slate-100">
+            <button
+              onClick={() => { setMobileMenuOpen(false); onOpenBooking('Mobile Navbar'); }}
+              className="w-full rounded-xl bg-brand-500 py-2.5 text-sm font-bold text-white transition-colors hover:bg-brand-600 focus:outline-none"
+            >
+              Book a Demo
+            </button>
+          </div>
         </div>
       )}
     </header>

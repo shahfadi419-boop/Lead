@@ -83,7 +83,7 @@ export function Hero({ onNavigate }) {
             <button
               type="button"
               onClick={openExperience}
-              className="group inline-flex min-h-14 items-center justify-center gap-3 rounded-2xl bg-cyan-500 px-6 text-sm font-bold text-white shadow-[0_18px_42px_-18px_rgba(6,182,212,0.62)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2"
+              className="group inline-flex min-h-14 items-center justify-center gap-3 rounded-2xl bg-brand-500 px-6 text-sm font-bold text-white shadow-[0_18px_42px_-18px_rgba(43,191,221,0.62)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2"
             >
               <Sparkles className="h-5 w-5 transition-transform duration-300 group-hover:rotate-12" />
               Experience the Magic

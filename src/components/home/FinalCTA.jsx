@@ -110,7 +110,7 @@ export function FinalCTA({ onOpenBooking }) {
                 </Field>
               </div>
 
-              <button type="submit" className="group mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-5 py-3.5 text-sm font-bold text-white shadow-[0_15px_30px_-14px_rgba(6,182,212,0.9)] transition hover:-translate-y-0.5 hover:bg-cyan-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-200">
+              <button type="submit" className="group mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3.5 text-sm font-bold text-white shadow-[0_15px_30px_-14px_rgba(43,191,221,0.9)] transition hover:-translate-y-0.5 hover:bg-brand-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-200">
                 <CalendarDays className="h-4 w-4" />
                 Schedule My Demo
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />

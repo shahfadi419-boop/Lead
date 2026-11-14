@@ -75,7 +75,7 @@ export function LeadDashboardPreview({ onNavigate }) {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-cyan-50/80 to-transparent" />
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-600 shadow-sm">
+          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.15em] text-cyan-800">
             <Radar className="h-3.5 w-3.5 text-cyan-600" />
             Live opportunity intelligence
           </div>
@@ -140,7 +140,7 @@ export function LeadDashboardPreview({ onNavigate }) {
                   <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-700">Lead focus</p>
                   <h3 className="mt-1 text-lg font-bold text-slate-900">Opportunity radar</h3>
                 </div>
-                <span className="rounded-lg bg-slate-100 px-2 py-1 font-mono text-[10px] text-slate-500">0{currentIndex + 1}/03</span>
+                <span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold tracking-[0.08em] text-slate-400">0{currentIndex + 1}/03</span>
               </div>
 
               <div className="mt-6 flex gap-2 rounded-2xl bg-slate-100 p-1.5">
@@ -154,7 +154,7 @@ export function LeadDashboardPreview({ onNavigate }) {
                       onClick={() => setActiveTab(tab)}
                       aria-label={`Show ${lead.prospect}'s opportunity`}
                       aria-pressed={isActive}
-                      className={`relative flex h-10 flex-1 items-center justify-center rounded-xl text-xs font-bold transition-all ${isActive ? 'bg-cyan-500 text-white shadow-[0_8px_24px_rgba(6,182,212,0.24)]' : 'text-slate-500 hover:bg-white hover:text-slate-700'}`}
+                      className={`relative flex h-10 flex-1 items-center justify-center rounded-xl text-xs font-bold transition-all ${isActive ? 'bg-brand-500 text-white shadow-[0_8px_24px_rgba(43,191,221,0.24)]' : 'text-slate-500 hover:bg-white hover:text-slate-700'}`}
                     >
                       {tab === 'hot' ? <Flame className="h-4 w-4" /> : tab === 'warm' ? <Target className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
                     </button>

@@ -47,7 +47,7 @@ export function BookDemoPage({ onNavigate }) {
           </div>
 
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <button onClick={() => onNavigate('experience')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 text-sm font-bold text-white shadow-[0_12px_28px_-14px_rgba(6,182,212,0.8)] transition hover:bg-cyan-600"><Sparkles className="h-4 w-4" /> Explore the AI experience</button>
+            <button onClick={() => onNavigate('experience')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3 text-sm font-bold text-white shadow-[0_12px_28px_-14px_rgba(43,191,221,0.8)] transition hover:bg-brand-600"><Sparkles className="h-4 w-4" /> Explore the AI experience</button>
             <button onClick={() => onNavigate('home')} className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">Return home</button>
           </div>
         </div>
@@ -105,7 +105,7 @@ export function BookDemoPage({ onNavigate }) {
               <Field label="What challenge would you like to solve?" hint="Optional"><textarea rows={3} value={formData.notes} onChange={updateField('notes')} placeholder="For example: We need faster replies on WhatsApp and better lead qualification before calls." className={`${FIELD_STYLE} resize-none`} /></Field>
 
               <div className="pt-2">
-                <button type="submit" className="group flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-5 py-3.5 text-sm font-bold text-white shadow-[0_14px_30px_-14px_rgba(6,182,212,0.85)] transition hover:bg-cyan-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-200"><CalendarDays className="h-4 w-4" /> Reserve my demo <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></button>
+                <button type="submit" className="group flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3.5 text-sm font-bold text-white shadow-[0_14px_30px_-14px_rgba(43,191,221,0.85)] transition hover:-translate-y-0.5 hover:bg-brand-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-200"><CalendarDays className="h-4 w-4" /> Reserve my demo <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></button>
                 <p className="mt-4 flex items-center justify-center gap-2 text-center text-[11px] text-slate-500"><LockKeyhole className="h-3.5 w-3.5 text-cyan-600" /> Your details are used only to arrange this demo.</p>
               </div>
             </form>

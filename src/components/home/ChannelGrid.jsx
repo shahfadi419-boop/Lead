@@ -18,10 +18,10 @@ export function ChannelGrid({ onNavigate }) {
         
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold uppercase tracking-wider">
-            <span>Multi-Channel Architecture</span>
+          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.15em] text-cyan-800">
+            Multi-Channel Architecture
           </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-[-0.035em]">
             One Intelligence. Every Channel.
           </h2>
           <p className="text-base sm:text-lg text-slate-600 leading-relaxed">
