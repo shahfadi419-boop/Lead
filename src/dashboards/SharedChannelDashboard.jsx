@@ -6,7 +6,6 @@ import {
   getVisaStats,
   getPlatformEngagement,
   getPlatformLeads,
-  getPlatformPageInfo,
   getPlatformStats,
 } from './api';
 
@@ -233,38 +232,18 @@ function LiveExperienceLink({ label, href, platform }) {
   );
 }
 
-function SourceDashboard({ label, data, loading, isVisaSource }) {
+function SourceDashboard({ label, data, loading, isVisaSource, staticBadge }) {
   const engagement = data.engagement || {};
   const buckets = Array.isArray(engagement.buckets) ? engagement.buckets : [];
-  const connection = getConnection(data.pageInfo, label);
 
   return (
     <section aria-label={`${label} dashboard`} className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="text-xl font-bold text-slate-900">{label}</h2>
-        {!isVisaSource && (
-          <>
-            <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-              data.errors.pageInfo
-                ? 'bg-red-50 text-red-700'
-                : connection?.connected
-                  ? 'bg-emerald-50 text-emerald-700'
-                  : data.pageInfo
-                    ? 'bg-amber-50 text-amber-800'
-                    : 'bg-slate-100 text-slate-600'
-            }`}>
-              {data.errors.pageInfo
-                ? 'Connection status unavailable'
-                : connection?.connected
-                  ? 'Connected'
-                  : data.pageInfo
-                    ? 'Not connected'
-                    : 'Checking connection…'}
-            </span>
-            {connection?.page_name && (
-              <span className="text-sm text-slate-500">{connection.page_name}</span>
-            )}
-          </>
+        {!isVisaSource && staticBadge && (
+          <span className="rounded-full px-2.5 py-1 text-xs font-medium bg-emerald-50 text-emerald-700">
+            {staticBadge}
+          </span>
         )}
       </div>
 
@@ -402,7 +381,6 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
           ['stats',      () => getPlatformStats(source, { signal })],
           ['leads',      () => getPlatformLeads(source, { signal })],
           ['engagement', () => getPlatformEngagement(source, { signal })],
-          ['pageInfo',   () => getPlatformPageInfo(source, { signal })],
         ];
 
     setDashboard((current) => ({
@@ -460,7 +438,7 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
     };
   }, [activeView, loadSource, platform]);
 
-  // SSE live updates — visa sources only (facebook visa tab + whatsapp)
+  // SSE live updates — visa sources (facebook visa tab + whatsapp)
   useEffect(() => {
     if (!isVisaSource) return;
     const dashboardKey = source === 'facebook' ? 'visa' : 'whatsapp';
@@ -473,14 +451,36 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
           [dashboardKey]: transformSsePayload(JSON.parse(event.data)),
         }));
       } catch (e) {
-        console.error('[SSE] parse error', e);
+        console.error('[SSE visa] parse error', e);
       }
     };
 
-    es.onerror = () => console.warn('[SSE] connection error, browser will retry');
+    es.onerror = () => console.warn('[SSE visa] connection error, browser will retry');
 
     return () => es.close();
   }, [source, isVisaSource]);
+
+  // SSE live updates — real estate source
+  useEffect(() => {
+    if (source !== 'real-estate') return;
+    const es = new EventSource('/real-estate-api/estate/dashboard/stream');
+
+    es.onmessage = (event) => {
+      try {
+        const raw = JSON.parse(event.data);
+        setDashboard((current) => ({
+          ...current,
+          realEstate: { ...raw, errors: {} },
+        }));
+      } catch (e) {
+        console.error('[SSE real-estate] parse error', e);
+      }
+    };
+
+    es.onerror = () => console.warn('[SSE real-estate] connection error, browser will retry');
+
+    return () => es.close();
+  }, [source]);
 
   const refreshDashboard = async () => {
     activeRequest.current?.abort();
@@ -495,11 +495,8 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
   };
 
   const title = PLATFORM_LABELS[platform];
-  const whatsappConnection = getConnection(dashboard.whatsapp?.pageInfo, 'WhatsApp Business');
-  const whatsappNumber = whatsappConnection?.number?.replace(/\D/g, '');
-  const whatsappLiveExperienceUrl = whatsappConnection?.connected && whatsappNumber
-    ? `https://wa.me/${whatsappNumber}`
-    : null;
+  const whatsappNumber = (import.meta.env.VITE_WHATSAPP_NUMBER || '').replace(/\D/g, '');
+  const whatsappLiveExperienceUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}` : null;
   const dashboardViews = [
     { id: 'visa', label: 'Visa' },
     { id: 'realEstate', label: 'Real Estate' },
@@ -619,6 +616,7 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
                 label="Real Estate"
                 data={dashboard.realEstate || EMPTY_SOURCE}
                 loading={loading}
+                staticBadge="Real Estate Agent"
               />
             )}
           </>
