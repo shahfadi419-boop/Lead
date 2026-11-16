@@ -1,125 +1,26 @@
-# ==============================================================================
-# LeadHive AI Platform — Security & Build Ignore Configuration
-# Protects against leaking dependencies, build artifacts, and sensitive credentials
-# ==============================================================================
-
-# 1. Dependencies & Package Managers
-node_modules/
-.pnp
-.pnp.js
-.yarn/cache
-.yarn/unplugged
-.yarn/build-state.yml
-.yarn/install-state.gz
-
-# 2. Production & Build Outputs
-dist/
-dist-ssr/
-build/
-out/
-*.tsbuildinfo
-
-# 3. Environment & Security Secrets (STRICT SECURITY PROTECTION)
-# Never commit real credentials, secret keys, or OAuth client configurations
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-*.env.*.local
-.env*.local
-
-# Private Keys, Certificates & Tokens
-*.pem
-*.key
-*.cert
-*.crt
-*.pfx
-*.p12
-*.id_rsa
-*.id_ed25519
-*.keystore
-
-# API Keys, Service Accounts & Cloud Credentials
-credentials.json
-service-account*.json
-client_secret*.json
-google-services.json
-firebase-adminsdk*.json
-aws-credentials*
-*.passwd
-
-# 4. Logs, Runtime Traces & Diagnostics
-logs/
+# Logs
+logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-vite.log
 
-# 5. Runtime & Cache Storage
-.vite/
-.cache/
-.parcel-cache/
-.eslintcache
-.stylelintcache
-.turbo/
+node_modules
+dist
+dist-ssr
+*.local
 
-# 6. Testing & Code Coverage
-coverage/
-.nyc_output/
-cypress/videos/
-cypress/screenshots/
-playwright-report/
-test-results/
-
-# 7. Operating System Metadata
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-[Dd]esktop.ini
-$RECYCLE.BIN/
-
-# 8. IDE, Editor & Developer Tools
-.idea/
-.project
-.classpath
-.c9/
-*.launch
-*.sublime-workspace
+# Editor directories and files
 .vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
 !.vscode/extensions.json
+.idea
+.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-*.bak
-*~
-
-# 9. Temporary & Backup Files
-tmp/
-temp/
-*.tmp
-*.bak
-*.swp
-*.swo
-
-# 10. Local visual QA captures (production image assets live in public/)
-/homepage-*.png
-/exp-*.png
-/navbar-*.png
-/leadhive-homepage-*.png
-/leadhive-exp-screen*.png
-/leadhive-booking-modal.png
-/leadhive-telemetry-drawer.png
-
+.env
+.envlocal

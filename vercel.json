@@ -1,16 +1,121 @@
 {
-  "rewrites": [
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "routes": [
     {
-      "source": "/dashboard",
-      "destination": "/index.html"
+      "src": "^/cpanel/?$",
+      "status": 302,
+      "dest": "https://core47.hostingmadeeasy.com:2083/"
     },
     {
-      "source": "/book-demo",
-      "destination": "/index.html"
+      "src": "^/auth(?<path>/.*)?$",
+      "dest": "https://8qgnw9pl-8005.inc1.devtunnels.ms/auth$path",
+      "transforms": [
+        {
+          "type": "request.headers",
+          "op": "set",
+          "target": { "key": "X-Tunnel-Skip-AntiPhishing-Page" },
+          "args": "true"
+        }
+      ]
     },
     {
-      "source": "/experience",
-      "destination": "/index.html"
+      "src": "^/api(?<path>/(?!facebook(?:/|$)|real-estate(?:/|$)|whatsapp(?:/|$)).*)?$",
+      "dest": "https://8qgnw9pl-8005.inc1.devtunnels.ms/api$path",
+      "transforms": [
+        {
+          "type": "request.headers",
+          "op": "set",
+          "target": { "key": "X-Tunnel-Skip-AntiPhishing-Page" },
+          "args": "true"
+        }
+      ]
+    },
+    {
+      "src": "^/business-profile(?<path>/.*)?$",
+      "dest": "https://8qgnw9pl-8005.inc1.devtunnels.ms/business-profile$path",
+      "transforms": [
+        {
+          "type": "request.headers",
+          "op": "set",
+          "target": { "key": "X-Tunnel-Skip-AntiPhishing-Page" },
+          "args": "true"
+        }
+      ]
+    },
+    {
+      "src": "^/selection-videos(?<path>/.*)?$",
+      "dest": "https://8qgnw9pl-8005.inc1.devtunnels.ms/selection-videos$path",
+      "transforms": [
+        {
+          "type": "request.headers",
+          "op": "set",
+          "target": { "key": "X-Tunnel-Skip-AntiPhishing-Page" },
+          "args": "true"
+        }
+      ]
+    },
+    {
+      "src": "^/comments(?<path>/.*)?$",
+      "dest": "https://8qgnw9pl-8005.inc1.devtunnels.ms/comments$path",
+      "transforms": [
+        {
+          "type": "request.headers",
+          "op": "set",
+          "target": { "key": "X-Tunnel-Skip-AntiPhishing-Page" },
+          "args": "true"
+        }
+      ]
+    },
+    {
+      "src": "^/ai(?<path>/.*)?$",
+      "dest": "https://8qgnw9pl-8005.inc1.devtunnels.ms/ai$path",
+      "transforms": [
+        {
+          "type": "request.headers",
+          "op": "set",
+          "target": { "key": "X-Tunnel-Skip-AntiPhishing-Page" },
+          "args": "true"
+        }
+      ]
+    },
+    {
+      "src": "^/analytics(?<path>/.*)?$",
+      "dest": "https://8qgnw9pl-8005.inc1.devtunnels.ms/analytics$path",
+      "transforms": [
+        {
+          "type": "request.headers",
+          "op": "set",
+          "target": { "key": "X-Tunnel-Skip-AntiPhishing-Page" },
+          "args": "true"
+        }
+      ]
+    },
+    {
+      "src": "^/demo(?<path>/.*)?$",
+      "dest": "https://8qgnw9pl-8005.inc1.devtunnels.ms/demo$path",
+      "transforms": [
+        {
+          "type": "request.headers",
+          "op": "set",
+          "target": { "key": "X-Tunnel-Skip-AntiPhishing-Page" },
+          "args": "true"
+        }
+      ]
+    },
+    {
+      "src": "^/privacy$",
+      "dest": "/privacy/index.html"
+    },
+    {
+      "src": "^/terms$",
+      "dest": "/terms/index.html"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "^/.*$",
+      "dest": "/index.html"
     }
   ]
 }

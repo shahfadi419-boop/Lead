@@ -1,266 +1,193 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {
-  html {
-    scroll-behavior: smooth;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+@import './shared/styles/tokens.css';
+@import './shared/styles/base.css';
+@import './shared/styles/design-system.css';
+@import './shared/styles/components.css';
+@import './shared/styles/sections.css';
+@import './shared/styles/premium-white.css';
+
+.channel-intro-copy {
+  width: 100%;
+  max-width: 42rem;
+  margin-inline: auto !important;
+  text-align: center !important;
+}
+
+/* Channel account actions share sizing while keeping each action's meaning clear. */
+.channel-settings-action {
+  display: inline-flex;
+  min-height: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  white-space: nowrap;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease,
+    box-shadow 160ms ease, transform 160ms ease;
+}
+
+.channel-settings-action:hover {
+  transform: translateY(-1px);
+}
+
+.channel-settings-action:active {
+  transform: translateY(0);
+}
+
+.channel-settings-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+  box-shadow: none;
+}
+
+.channel-settings-action--disconnect {
+  border-color: #e5e7eb;
+  background: #ffffff;
+  color: #1f2937;
+  box-shadow: 0 1px 2px rgba(7, 16, 29, 0.08);
+}
+
+.channel-settings-action--disconnect:hover {
+  border-color: #fecaca;
+  background: #fff7f7;
+}
+
+.channel-settings-action:focus-visible {
+  outline: 2px solid #2cc1df;
+  outline-offset: 2px;
+}
+
+.channel-settings-action--disconnect:focus-visible {
+  outline-color: #ef4444;
+}
+
+/* Shared LeadHive primary action color across the YouTube workspace. */
+.lh-primary-action {
+  border: 1px solid #2cc1df !important;
+  background: #2cc1df !important;
+  color: #07101d !important;
+  box-shadow: 0 1px 2px rgba(7, 16, 29, 0.1), 0 8px 18px -12px rgba(44, 193, 223, 0.9);
+  transition: background-color 160ms ease, border-color 160ms ease,
+    box-shadow 160ms ease, transform 160ms ease;
+}
+
+.lh-primary-action:hover:not(:disabled) {
+  border-color: #20adc9 !important;
+  background: #20adc9 !important;
+  box-shadow: 0 2px 4px rgba(7, 16, 29, 0.12), 0 11px 22px -13px rgba(32, 173, 201, 0.95);
+  transform: translateY(-1px);
+}
+
+.lh-primary-action:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.channel-privacy-link {
+  color: #168ca1 !important;
+}
+
+.channel-privacy-link:hover {
+  color: #0f7183 !important;
+}
+
+.lh-app-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  height: var(--nav-height);
+  border-bottom: 1px solid #e5e7eb;
+  background: rgb(255 255 255 / 95%);
+  box-shadow: 0 1px 2px rgb(7 16 29 / 8%);
+  backdrop-filter: blur(18px) saturate(125%);
+}
+
+.lh-app-header-inner {
+  display: flex;
+  width: var(--nav-inner-width);
+  max-width: none;
+  height: 100%;
+  align-items: center;
+  gap: 12px;
+  margin-inline: auto;
+  padding-inline: 0;
+}
+
+.lh-app-header-logo img {
+  display: block;
+  width: auto;
+  height: 32px;
+  max-width: 200px;
+  object-fit: contain;
+}
+
+.demo-services-main {
+  min-height: calc(100svh - var(--nav-height));
+}
+
+.demo-services-main > section {
+  width: 100%;
+}
+
+.lh-youtube-skeleton {
+  background: linear-gradient(90deg, #edf2f5 25%, #f7fafc 50%, #edf2f5 75%);
+  background-size: 200% 100%;
+  animation: lh-youtube-shimmer 1.4s ease-in-out infinite;
+}
+
+.lh-description-attention {
+  animation: lh-description-blink 0.8s ease-in-out infinite;
+}
+
+@keyframes lh-youtube-shimmer {
+  to { background-position: -200% 0; }
+}
+
+@keyframes lh-description-blink {
+  50% {
+    border-color: #f59e0b;
+    background-color: #fffbeb;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
   }
-
-  body {
-    margin: 0;
-    background: #ffffff;
-  }
 }
-
-/* Premium hero and initial loading motion */
-.hero-grid {
-  background-image:
-    linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: linear-gradient(to bottom, black 0%, rgba(0, 0, 0, 0.72) 64%, transparent 100%);
-}
-
-@keyframes heroReveal {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes loaderSpin {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes loaderSpinReverse {
-  to { transform: rotate(-360deg); }
-}
-
-@keyframes loaderDotPulse {
-  0%, 100% { transform: scale(0.82); opacity: 0.65; }
-  50% { transform: scale(1.14); opacity: 1; }
-}
-
-@keyframes loaderProgress {
-  0% { width: 0%; transform: translateX(-12%); }
-  75% { width: 82%; }
-  100% { width: 100%; transform: translateX(0); }
-}
-
-.hero-reveal {
-  animation: heroReveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.hero-reveal-delay-1 { animation-delay: 80ms; }
-.hero-reveal-delay-2 { animation-delay: 160ms; }
-.hero-reveal-delay-3 { animation-delay: 240ms; }
-.hero-reveal-delay-4 { animation-delay: 320ms; }
-
-@keyframes heroSignalFlow {
-  to { stroke-dashoffset: -34; }
-}
-
-@keyframes heroOrbit {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes heroOrbitReverse {
-  to { transform: rotate(-360deg); }
-}
-
-@keyframes heroChannelBreathe {
-  0%, 100% { border-color: rgba(226, 232, 240, 0.92); transform: translateX(0); }
-  50% { border-color: rgba(103, 232, 249, 0.9); transform: translateX(2px); }
-}
-
-.hero-signal-path,
-.hero-output-path {
-  fill: none;
-  stroke: url(#signalGradient);
-  stroke-width: 1.7;
-  stroke-linecap: round;
-  stroke-dasharray: 4 8;
-  animation: heroSignalFlow 2.8s linear infinite;
-}
-
-.hero-output-path {
-  stroke-width: 2.2;
-  stroke-dasharray: 6 7;
-  animation-duration: 1.8s;
-}
-
-.hero-signal-path-2 { animation-delay: -0.35s; }
-.hero-signal-path-3 { animation-delay: -0.7s; }
-.hero-signal-path-4 { animation-delay: -1.05s; }
-.hero-signal-path-5 { animation-delay: -1.4s; }
-.hero-signal-path-6 { animation-delay: -1.75s; }
-.hero-signal-path-7 { animation-delay: -2.1s; }
-
-.hero-core-orbit {
-  animation: heroOrbit 14s linear infinite;
-  box-shadow: 0 0 38px rgba(34, 211, 238, 0.16), inset 0 0 28px rgba(34, 211, 238, 0.08);
-}
-
-.hero-core-orbit::before,
-.hero-core-orbit-reverse::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: -3px;
-  width: 7px;
-  height: 7px;
-  border-radius: 9999px;
-  background: #22d3ee;
-  box-shadow: 0 0 15px rgba(34, 211, 238, 0.9);
-}
-
-.hero-core-orbit-reverse {
-  animation: heroOrbitReverse 9s linear infinite;
-}
-
-.hero-core-orbit-reverse::before {
-  left: auto;
-  right: 16%;
-  top: auto;
-  bottom: -2px;
-  width: 5px;
-  height: 5px;
-  background: #14b8a6;
-}
-
-.hero-channel-card {
-  animation: heroChannelBreathe 4s ease-in-out infinite;
-  animation-delay: var(--channel-delay);
-}
-
-.conversion-visual:hover .hero-ai-core {
-  transform: scale(1.025);
-  box-shadow: 0 24px 56px -20px rgba(6, 182, 212, 0.72);
-}
-
-.hero-ai-core {
-  transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 500ms ease;
-}
-
-.loader-ring { animation: loaderSpin 1.35s linear infinite; }
-.loader-ring-reverse { animation: loaderSpinReverse 1.8s linear infinite; }
-.loader-dot { animation: loaderDotPulse 1.2s ease-in-out infinite; }
-.loader-progress { animation: loaderProgress 0.95s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-reveal,
-  .loader-ring,
-  .loader-ring-reverse,
-  .loader-dot,
-  .loader-progress {
-    animation: none !important;
-  }
-
-  .hero-signal-path,
-  .hero-output-path,
-  .hero-core-orbit,
-  .hero-core-orbit-reverse,
-  .hero-channel-card,
-  .hero-signal-dot {
-    animation: none !important;
-  }
-
-  .loader-progress { width: 100%; }
-}
-
-/* Custom subtle animations */
-@keyframes pulseSubtle {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.85;
-    transform: scale(1.02);
+  .lh-youtube-skeleton,
+  .lh-description-attention {
+    animation: none;
   }
 }
 
-@keyframes flowLine {
-  0% {
-    stroke-dashoffset: 100;
+@media (max-width: 767px) {
+  .lh-app-header {
+    height: var(--nav-height-mobile);
   }
-  100% {
-    stroke-dashoffset: 0;
-  }
-}
 
-@keyframes processFlow {
-  0% {
-    transform: translateX(0);
-    opacity: 0;
+  .lh-app-header-inner {
+    width: var(--nav-inner-width-mobile);
   }
-  8%, 88% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(min(76vw, 69rem));
-    opacity: 0;
-  }
-}
 
-@keyframes dashboardSweep {
-  0% {
-    transform: translateX(-125%);
+  .demo-services-main {
+    min-height: calc(100svh - var(--nav-height-mobile));
   }
-  100% {
-    transform: translateX(325%);
+
+  .navbar-wrap,
+  .navbar {
+    height: var(--nav-height-mobile);
+  }
+
+  .navbar {
+    width: var(--nav-inner-width-mobile);
+  }
+
+  .mobile-menu {
+    top: var(--nav-height-mobile);
   }
 }
-
-.animate-pulse-subtle {
-  animation: pulseSubtle 3s ease-in-out infinite;
-}
-
-.animate-process-flow {
-  animation: processFlow 6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
-}
-
-.animate-dashboard-sweep {
-  animation: dashboardSweep 5.5s ease-in-out infinite;
-}
-
-/* Glass & Card styles */
-.lead-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.lead-card:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
-}
-
-/* Instagram official gradient background */
-.instagram-gradient {
-  background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
-}
-
-/* Scrollbar clean */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #f8fafc;
-}
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-

@@ -1,49 +1,104 @@
-import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import { defineConfig, loadEnv } from 'vite'
+import path from 'node:path'
 
-// https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '')
-  const visaUrl      = env.VITE_VISA_API_URL        || 'http://localhost:8000'
-  const realEstateUrl = env.VITE_REAL_ESTATE_API_URL || 'http://localhost:8010'
+  const env = loadEnv(mode, import.meta.dirname, '')
+  const backendUrl = env.BACKEND_URL?.trim()
+  if (!backendUrl) {
+    throw new Error('BACKEND_URL must be set in the project .env file.')
+  }
+  const facebookBackendUrl = env.FACEBOOK_BACKEND_URL?.trim()
+  if (!facebookBackendUrl) {
+    throw new Error('FACEBOOK_BACKEND_URL must be set in the project .env file.')
+  }
+  const realEstateBackendUrl = env.REAL_ESTATE_BACKEND_URL?.trim()
+  if (!realEstateBackendUrl) {
+    throw new Error('REAL_ESTATE_BACKEND_URL must be set in the project .env file.')
+  }
+
+  for (const [name, value] of [
+    ['BACKEND_URL', backendUrl],
+    ['FACEBOOK_BACKEND_URL', facebookBackendUrl],
+    ['REAL_ESTATE_BACKEND_URL', realEstateBackendUrl],
+  ]) {
+    try {
+      const protocol = new URL(value).protocol
+      if (protocol !== 'http:' && protocol !== 'https:') {
+        throw new Error()
+      }
+    } catch {
+      throw new Error(`${name} must be a valid HTTP or HTTPS URL.`)
+    }
+  }
+
+  const createBackendProxy = (target) => ({
+    target,
+    changeOrigin: true,
+    secure: true,
+    headers: {
+      'X-Tunnel-Skip-AntiPhishing-Page': 'true',
+      'ngrok-skip-browser-warning': 'true',
+    },
+  })
+  const backendProxy = createBackendProxy(backendUrl)
+  const facebookBackendProxy = {
+    ...createBackendProxy(facebookBackendUrl),
+    rewrite: (requestPath) => requestPath.replace(/^\/facebook-api/, ''),
+  }
+  const realEstateBackendProxy = createBackendProxy(realEstateBackendUrl)
 
   return {
-    plugins: [react()],
+    plugins: [react(), tailwindcss()],
+    envPrefix: [ 'VITE_RECAPTCHA_SITE_KEY' ],
+
+    resolve: {
+      alias: {
+        '@': path.resolve(import.meta.dirname, './src'),
+      },
+    },
+
     server: {
-      port: 5180,
-      strictPort: true,
-      host: '0.0.0.0',
       proxy: {
-        '/facebook-api': {
-          target: visaUrl,
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/facebook-api/, ''),
-        },
-        '/whatsapp-api': {
-          target: visaUrl,
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/whatsapp-api/, ''),
-        },
-        '/visa-api': {
-          target: visaUrl,
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/visa-api/, ''),
-        },
-        '/real-estate-api': {
-          target: realEstateUrl,
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/real-estate-api/, ''),
-        },
-        '/youtube-api': {
-          target: 'https://8qgnw9pl-8005.inc1.devtunnels.ms',
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/youtube-api/, ''),
-          configure: (proxy) => {
-            proxy.on('proxyReq', (proxyReq) => {
-              proxyReq.setHeader('X-Tunnel-Skip-AntiPhishing-Page', 'true');
-            });
+        '/api/facebook': {
+          ...facebookBackendProxy,
+          rewrite: (requestPath) => {
+            const url = new URL(requestPath, 'http://localhost')
+            const endpoint = url.searchParams.get('endpoint')
+            if (!endpoint) return requestPath
+            url.searchParams.delete('endpoint')
+            return `/${endpoint}${url.search}`
           },
         },
+        '/api/whatsapp': {
+          ...facebookBackendProxy,
+          rewrite: (requestPath) => {
+            const url = new URL(requestPath, 'http://localhost')
+            const endpoint = url.searchParams.get('endpoint')
+            if (!endpoint) return requestPath
+            url.searchParams.delete('endpoint')
+            return `/${endpoint}${url.search}`
+          },
+        },
+        '/api/real-estate': {
+          ...realEstateBackendProxy,
+          rewrite: (requestPath) => {
+            const url = new URL(requestPath, 'http://localhost')
+            const endpoint = url.searchParams.get('endpoint')
+            if (!endpoint) return requestPath
+            url.searchParams.delete('endpoint')
+            return `/estate/${endpoint}${url.search}`
+          },
+        },
+        '/api': backendProxy,
+        '/auth': backendProxy,
+        '/business-profile': backendProxy,
+        '/selection-videos': backendProxy,
+        '/comments': backendProxy,
+        '/ai': backendProxy,
+        '/analytics': backendProxy,
+        '/demo': backendProxy,
       },
     },
   }
