@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, ExternalLink, Play, RefreshCw } from 'lucide-react';
 import { getYouTubePinnedAnalytics } from './api';
 
-const LIVE_EXPERIENCE_URL = 'https://www.youtube.com/watch?v=DYdVbE-c8co';
+const LIVE_EXPERIENCE_URL = 'https://lead-old-draft.vercel.app/flow?step=1';
 
 function formatNumber(value) {
   return typeof value === 'number' && Number.isFinite(value)

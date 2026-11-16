@@ -1,4 +1,11 @@
 {
+  "redirects": [
+    {
+      "source": "/cpanel",
+      "destination": "https://core47.hostingmadeeasy.com:2083/",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/dashboard",
