@@ -40,6 +40,25 @@ function formatCell(value) {
   return String(value);
 }
 
+const LEAD_STATUS_LABELS = {
+  qualified_ready_for_call: '🔥 Hot',
+  hot_lead: '🔥 Hot',
+  hot: '🔥 Hot',
+  qualified_missing_call_time: '📞 Qualified',
+  qualified: '📞 Qualified',
+  warm_missing_contact_details: '📇 No Details',
+  warm_missing_contact: '📵 No Contact',
+  warm_lead: '🌤️ Warm',
+  warm: '🌤️ Warm',
+  new: '✨ New',
+};
+
+function formatLeadStatus(status) {
+  if (typeof status !== 'string' || !status.trim()) return status;
+  const normalized = status.trim().toLowerCase().replace(/[\s-]+/g, '_');
+  return LEAD_STATUS_LABELS[normalized] || status;
+}
+
 function maskPhone(phone) {
   const s = String(phone).replace(/\s+/g, '');
   if (s.length <= 6) return '****';
@@ -111,7 +130,6 @@ function LeadsTable({ data, loading, label }) {
   const sharedColumns = [
     { label: 'Name', value: (lead) => lead.name },
     { label: 'Phone', value: (lead) => lead.phone ? maskPhone(lead.phone) : '—' },
-    { label: 'Email', value: (lead) => lead.email },
   ];
   const columns = label === 'Real Estate'
     ? [
@@ -121,15 +139,7 @@ function LeadsTable({ data, loading, label }) {
       { label: 'Budget', value: (lead) => lead.budget_range || lead.budget },
       { label: 'Preferred Call Time', value: (lead) => lead.preferred_call_time },
       { label: 'Platform', value: (lead) => lead.platform },
-      { label: 'Stage', value: (lead) => lead.stage },
-      { label: 'Score', value: (lead) => lead.score },
-      { label: 'Messages', value: (lead) => lead.message_count },
-      {
-        label: 'Handoff Requested',
-        value: (lead) => typeof lead.handoff_requested === 'boolean'
-          ? lead.handoff_requested ? 'Yes' : 'No'
-          : lead.handoff_requested,
-      },
+      { label: 'Status', value: (lead) => formatLeadStatus(lead.stage) },
     ]
     : label === 'Visa'
       ? [
@@ -138,16 +148,15 @@ function LeadsTable({ data, loading, label }) {
         { label: 'Country', value: (lead) => lead.country },
         { label: 'Preferred Call Time', value: (lead) => lead.preferred_calling_time || lead.preferred_call_time },
         { label: 'Platform', value: (lead) => lead.platform },
-        { label: 'Status', value: (lead) => lead.lead_status || lead.stage },
+        { label: 'Status', value: (lead) => formatLeadStatus(lead.lead_status || lead.stage) },
       ]
       : [
         ...sharedColumns,
         { label: 'Interest', value: (lead) => lead.visa_interest || lead.property_type },
         { label: 'Country', value: (lead) => lead.country },
-        { label: 'Budget', value: (lead) => lead.budget || lead.budget_range },
         { label: 'Preferred Call Time', value: (lead) => lead.preferred_calling_time || lead.preferred_call_time },
         { label: 'Platform', value: (lead) => lead.platform },
-        { label: 'Status', value: (lead) => lead.lead_status || lead.stage },
+        { label: 'Status', value: (lead) => formatLeadStatus(lead.lead_status || lead.stage) },
       ];
 
   return (
@@ -159,14 +168,14 @@ function LeadsTable({ data, loading, label }) {
         </span>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[850px] border-collapse text-left">
+        <table className="w-full min-w-[850px] border-collapse text-center">
           <thead>
             <tr className="border-b border-slate-200">
               {columns.map(({ label: columnLabel }) => (
                 <th
                   key={columnLabel}
                   scope="col"
-                  className="whitespace-nowrap px-4 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500 first:pl-5"
+                  className="whitespace-nowrap border-r border-slate-200 px-4 py-3 text-[11px] font-extrabold uppercase tracking-[0.12em] text-slate-700 last:border-r-0"
                 >
                   {columnLabel}
                 </th>
@@ -182,7 +191,7 @@ function LeadsTable({ data, loading, label }) {
                 {columns.map(({ label: columnLabel, value }) => (
                   <td
                     key={columnLabel}
-                    className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 first:pl-5"
+                    className="whitespace-nowrap border-r border-slate-100 px-4 py-3 text-sm text-slate-600 last:border-r-0"
                   >
                     {formatCell(value(lead))}
                   </td>
