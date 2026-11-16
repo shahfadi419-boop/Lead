@@ -404,6 +404,7 @@ function transformSsePayload(raw) {
 export function SharedChannelDashboard({ platform, onNavigate }) {
   const [dashboard, setDashboard] = useState({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [activeView, setActiveView] = useState('realEstate');
   const activeRequest = useRef(null);
   const loadedSources = useRef(new Set());
@@ -478,6 +479,7 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
   useEffect(() => {
     const controller = new AbortController();
     activeRequest.current = controller;
+    setRefreshing(false);
     setLoading(!loadedSources.current.has(source));
     loadSource(source, controller.signal).finally(() => {
       if (controller.signal.aborted) return;
@@ -545,12 +547,17 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
     activeRequest.current?.abort();
     const controller = new AbortController();
     activeRequest.current = controller;
+    setRefreshing(true);
     setLoading(true);
     loadedSources.current.delete(source);
-    await loadSource(source, controller.signal, true);
-    if (controller.signal.aborted) return;
-    setLoading(false);
-    if (activeRequest.current === controller) activeRequest.current = null;
+    try {
+      await loadSource(source, controller.signal, true);
+    } finally {
+      if (controller.signal.aborted) return;
+      setLoading(false);
+      setRefreshing(false);
+      if (activeRequest.current === controller) activeRequest.current = null;
+    }
   };
 
   const title = PLATFORM_LABELS[platform];
@@ -592,15 +599,22 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
                 : 'Lead performance and engagement overview.'}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={refreshDashboard}
-            disabled={loading}
-            className="inline-flex min-h-10 items-center justify-center gap-2 self-start rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
-          >
-            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} aria-hidden="true" />
-            Refresh
-          </button>
+          <div className="flex flex-col items-start gap-2">
+            <button
+              type="button"
+              onClick={refreshDashboard}
+              disabled={loading}
+              className="inline-flex min-h-10 items-center justify-center gap-2 self-start rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
+            >
+              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} aria-hidden="true" />
+              Refresh
+            </button>
+            {refreshing && platform === 'facebook' && (
+              <p role="status" className="max-w-xs text-xs text-slate-500">
+                Please wait for a few moments (maximum waiting time: 5 minutes).
+              </p>
+            )}
+          </div>
         </header>
 
         <section
