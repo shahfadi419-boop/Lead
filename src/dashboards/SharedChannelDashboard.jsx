@@ -599,19 +599,22 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
                 : 'Lead performance and engagement overview.'}
             </p>
           </div>
-          <div className="flex flex-col items-start gap-2">
+          <div className="flex flex-wrap items-start gap-3">
             <button
               type="button"
               onClick={refreshDashboard}
               disabled={loading}
-              className="inline-flex min-h-10 items-center justify-center gap-2 self-start rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
+              className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
             >
               <RefreshCw size={15} className={loading ? 'animate-spin' : ''} aria-hidden="true" />
               Refresh
             </button>
             {refreshing && platform === 'facebook' && (
-              <p role="status" className="max-w-xs text-xs text-slate-500">
-                Please wait for a few moments (maximum waiting time: 5 minutes).
+              <p
+                role="status"
+                className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-900"
+              >
+                Recheck in 5 minutes
               </p>
             )}
           </div>
