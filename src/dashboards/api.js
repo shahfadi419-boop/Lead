@@ -107,11 +107,19 @@ export function getYouTubePinnedAnalytics(options) {
 // --- Visa backend (ai-lead-generator on port 8000) ---
 
 async function visaRequest(platform, endpoint, options = {}) {
-  const baseUrl = import.meta.env.DEV ? '/visa-api' : '/api/visa';
-  const query = new URLSearchParams({ platform, ...(options.query || {}) });
+  const isDevelopment = import.meta.env.DEV;
+  const baseUrl = isDevelopment ? '/visa-api' : '/api/facebook';
+  const query = new URLSearchParams({
+    ...(isDevelopment ? {} : { endpoint }),
+    platform,
+    ...(options.query || {}),
+  });
+  const requestUrl = isDevelopment
+    ? `${baseUrl}/${endpoint}?${query}`
+    : `${baseUrl}?${query}`;
   let response, data;
   try {
-    response = await fetch(`${baseUrl}/${endpoint}?${query}`, {
+    response = await fetch(requestUrl, {
       cache: 'no-store',
       headers: { Accept: 'application/json' },
       signal: options.signal,
