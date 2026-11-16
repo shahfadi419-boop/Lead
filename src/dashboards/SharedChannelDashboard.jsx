@@ -40,6 +40,12 @@ function formatCell(value) {
   return String(value);
 }
 
+function maskPhone(phone) {
+  const s = String(phone).replace(/\s+/g, '');
+  if (s.length <= 6) return '****';
+  return s.slice(0, 4) + ' **** ' + s.slice(-3);
+}
+
 function getChannelStats(stats, platform) {
   const platformStats = stats?.by_platform?.find(
     (item) => String(item.platform || '').toLowerCase() === platform,
@@ -104,7 +110,7 @@ function LeadsTable({ data, loading, label }) {
   const leadsLoading = loading && data.leads === null && !data.errors.leads;
   const sharedColumns = [
     { label: 'Name', value: (lead) => lead.name },
-    { label: 'Phone', value: (lead) => lead.phone ? 'Hidden' : '—' },
+    { label: 'Phone', value: (lead) => lead.phone ? maskPhone(lead.phone) : '—' },
     { label: 'Email', value: (lead) => lead.email },
   ];
   const columns = label === 'Real Estate'
