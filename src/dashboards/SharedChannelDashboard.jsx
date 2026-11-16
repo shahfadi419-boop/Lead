@@ -65,6 +65,24 @@ function maskPhone(phone) {
   return s.slice(0, 4) + ' **** ' + s.slice(-3);
 }
 
+function getLeadTimestamp(lead) {
+  const timestamp = lead.created_at ?? lead.createdAt ?? lead.updated_at ?? lead.timestamp;
+  if (typeof timestamp === 'number') return timestamp;
+  if (typeof timestamp !== 'string' || !timestamp.trim()) return Number.NEGATIVE_INFINITY;
+  const parsed = Date.parse(timestamp);
+  return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+}
+
+function formatLeadDateTime(lead) {
+  const timestamp = getLeadTimestamp(lead);
+  if (!Number.isFinite(timestamp)) return '—';
+
+  return new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(timestamp);
+}
+
 function getChannelStats(stats, platform) {
   const platformStats = stats?.by_platform?.find(
     (item) => String(item.platform || '').toLowerCase() === platform,
@@ -125,13 +143,18 @@ function MetricCards({ stats, loading, label }) {
 }
 
 function LeadsTable({ data, loading, label }) {
-  const leads = Array.isArray(data.leads) ? data.leads : [];
+  const leads = Array.isArray(data.leads)
+    ? data.leads
+      .map((lead, index) => ({ lead, index, timestamp: getLeadTimestamp(lead) }))
+      .sort((a, b) => b.timestamp - a.timestamp || a.index - b.index)
+      .map(({ lead }) => lead)
+    : [];
   const leadsLoading = loading && data.leads === null && !data.errors.leads;
   const sharedColumns = [
     { label: 'Name', value: (lead) => lead.name },
     { label: 'Phone', value: (lead) => lead.phone ? maskPhone(lead.phone) : '—' },
   ];
-  const columns = label === 'Real Estate'
+  const sourceColumns = label === 'Real Estate'
     ? [
       ...sharedColumns,
       { label: 'Property Type', value: (lead) => lead.property_type },
@@ -158,6 +181,10 @@ function LeadsTable({ data, loading, label }) {
         { label: 'Platform', value: (lead) => lead.platform },
         { label: 'Status', value: (lead) => formatLeadStatus(lead.lead_status || lead.stage) },
       ];
+  const columns = [
+    ...sourceColumns,
+    { label: 'Date & Time', value: formatLeadDateTime },
+  ];
 
   return (
     <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
