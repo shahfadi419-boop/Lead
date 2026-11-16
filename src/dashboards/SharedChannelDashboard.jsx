@@ -556,22 +556,11 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
           {platform === 'facebook' && (
             <>
               {activeView === 'visa' && (
-                <>
-                  <LiveExperienceLink
-                    label="Visa"
-                    href="https://www.facebook.com/messages/t/1416240811568711"
-                    platform="facebook"
-                  />
-                  {whatsappLiveExperienceUrl && (
-                    <LiveExperienceLink
-                      label="WhatsApp Business"
-                      href={whatsappLiveExperienceUrl}
-                      platform="whatsapp"
-                      displayPhoneNumber="+92 309 9104811"
-                      linkText="Click for live experience"
-                    />
-                  )}
-                </>
+                <LiveExperienceLink
+                  label="Visa"
+                  href="https://www.facebook.com/messages/t/1416240811568711"
+                  platform="facebook"
+                />
               )}
               {activeView === 'realEstate' && (
                 <LiveExperienceLink
