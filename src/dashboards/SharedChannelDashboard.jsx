@@ -204,7 +204,7 @@ function LiveExperienceLink({ label, href, platform, displayPhoneNumber, linkTex
   const isWhatsApp = platform === 'whatsapp';
   const text = isWhatsApp
     ? linkText || 'WhatsApp Experience Center'
-    : 'Facebook Experience Center';
+    : linkText || 'Facebook Experience Center';
 
   return (
     <a
@@ -237,7 +237,7 @@ function LiveExperienceLink({ label, href, platform, displayPhoneNumber, linkTex
   );
 }
 
-function SourceDashboard({ label, data, loading, isVisaSource, staticBadge }) {
+function SourceDashboard({ label, data, loading, isVisaSource, showConnectionStatus }) {
   const engagement = data.engagement || {};
   const buckets = Array.isArray(engagement.buckets) ? engagement.buckets : [];
 
@@ -245,9 +245,15 @@ function SourceDashboard({ label, data, loading, isVisaSource, staticBadge }) {
     <section aria-label={`${label} dashboard`} className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="text-xl font-bold text-slate-900">{label}</h2>
-        {!isVisaSource && staticBadge && (
-          <span className="rounded-full px-2.5 py-1 text-xs font-medium bg-emerald-50 text-emerald-700">
-            {staticBadge}
+        {showConnectionStatus && (
+          <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+            data.errors.stats
+              ? 'bg-red-50 text-red-700'
+              : data.stats
+                ? 'bg-emerald-50 text-emerald-700'
+                : 'bg-slate-100 text-slate-600'
+          }`}>
+            {data.errors.stats ? 'Connection unavailable' : data.stats ? 'Connected' : 'Connecting…'}
           </span>
         )}
       </div>
@@ -356,7 +362,7 @@ function transformSsePayload(raw) {
 export function SharedChannelDashboard({ platform, onNavigate }) {
   const [dashboard, setDashboard] = useState({});
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState('visa');
+  const [activeView, setActiveView] = useState('realEstate');
   const activeRequest = useRef(null);
   const loadedSources = useRef(new Set());
 
@@ -505,8 +511,8 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
   ).replace(/\D/g, '');
   const whatsappLiveExperienceUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}` : null;
   const dashboardViews = [
-    { id: 'visa', label: 'Visa' },
     { id: 'realEstate', label: 'Real Estate' },
+    { id: 'visa', label: 'Visa' },
   ];
 
   return (
@@ -560,6 +566,7 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
                   label="Visa"
                   href="https://www.facebook.com/messages/t/1416240811568711"
                   platform="facebook"
+                  linkText="Click for live experience"
                 />
               )}
               {activeView === 'realEstate' && (
@@ -567,6 +574,7 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
                   label="Real Estate"
                   href="https://www.facebook.com/messages/t/1451401514714679"
                   platform="facebook"
+                  linkText="Click for live experience"
                 />
               )}
             </>
@@ -616,6 +624,7 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
                 data={getChannelDashboardData(dashboard.visa || EMPTY_SOURCE, 'facebook')}
                 loading={loading}
                 isVisaSource
+                showConnectionStatus
               />
             )}
             {activeView === 'realEstate' && (
@@ -623,7 +632,7 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
                 label="Real Estate"
                 data={dashboard.realEstate || EMPTY_SOURCE}
                 loading={loading}
-                staticBadge="Real Estate Agent"
+                showConnectionStatus
               />
             )}
           </>
