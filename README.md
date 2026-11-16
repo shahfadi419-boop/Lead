@@ -63,20 +63,23 @@ Create `.env.local` in the project root (never commit this file):
 ```env
 # Backend URLs (used by vite.config.js proxy in dev)
 VITE_VISA_API_URL=http://localhost:8000
+VITE_FACEBOOK_API_URL=http://localhost:8000
+VITE_WHATSAPP_API_URL=http://localhost:8000
 VITE_REAL_ESTATE_API_URL=http://localhost:8010
 
 # WhatsApp Business number — digits only or with country code, spaces/+ stripped automatically
 VITE_WHATSAPP_NUMBER=923001234567
 ```
 
-In production (Vercel), set the equivalent server-side variables:
+In production (Vercel), set the backend base URLs for the serverless proxies:
 
 | Variable | Purpose |
 |---|---|
-| `VITE_VISA_API_URL` | Visa backend base URL |
-| `VITE_REAL_ESTATE_API_URL` | Real Estate backend base URL |
+| `FACEBOOK_API_URL` (or `VITE_FACEBOOK_API_URL`) | Facebook and Visa backend base URL |
+| `WHATSAPP_API_URL` (or `VITE_WHATSAPP_API_URL`) | WhatsApp backend base URL |
+| `REAL_ESTATE_API_URL` (or `VITE_REAL_ESTATE_API_URL`) | Real Estate backend base URL |
+| `YOUTUBE_API_URL` (or `VITE_YOUTUBE_API_URL`) | YouTube backend base URL |
 | `VITE_WHATSAPP_NUMBER` | WhatsApp Business number for the experience link |
-| `YOUTUBE_API_URL` | YouTube backend base URL |
 
 ## Build and deploy
 

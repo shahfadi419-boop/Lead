@@ -4,8 +4,15 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const visaUrl      = env.VITE_VISA_API_URL        || 'http://localhost:8000'
+  const visaUrl       = env.VITE_VISA_API_URL        || 'http://localhost:8000'
+  const facebookUrl   = env.VITE_FACEBOOK_API_URL    || visaUrl
+  const whatsappUrl   = env.VITE_WHATSAPP_API_URL    || visaUrl
   const realEstateUrl = env.VITE_REAL_ESTATE_API_URL || 'http://localhost:8010'
+  const configureTunnelProxy = (proxy) => {
+    proxy.on('proxyReq', (proxyReq) => {
+      proxyReq.setHeader('X-Tunnel-Skip-AntiPhishing-Page', 'true')
+    })
+  }
 
   return {
     plugins: [react()],
@@ -15,19 +22,22 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       proxy: {
         '/facebook-api': {
-          target: visaUrl,
+          target: facebookUrl,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/facebook-api/, ''),
+          configure: configureTunnelProxy,
         },
         '/whatsapp-api': {
-          target: visaUrl,
+          target: whatsappUrl,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/whatsapp-api/, ''),
+          configure: configureTunnelProxy,
         },
         '/visa-api': {
           target: visaUrl,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/visa-api/, ''),
+          configure: configureTunnelProxy,
         },
         '/real-estate-api': {
           target: realEstateUrl,
@@ -38,11 +48,7 @@ export default defineConfig(({ mode }) => {
           target: 'https://8qgnw9pl-8005.inc1.devtunnels.ms',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/youtube-api/, ''),
-          configure: (proxy) => {
-            proxy.on('proxyReq', (proxyReq) => {
-              proxyReq.setHeader('X-Tunnel-Skip-AntiPhishing-Page', 'true');
-            });
-          },
+          configure: configureTunnelProxy,
         },
       },
     },
