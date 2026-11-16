@@ -41,16 +41,16 @@ function formatCell(value) {
 }
 
 const LEAD_STATUS_LABELS = {
-  qualified_ready_for_call: '🔥 Hot',
-  hot_lead: '🔥 Hot',
-  hot: '🔥 Hot',
-  qualified_missing_call_time: '📞 Qualified',
-  qualified: '📞 Qualified',
-  warm_missing_contact_details: '📇 No Details',
-  warm_missing_contact: '📵 No Contact',
-  warm_lead: '🌤️ Warm',
-  warm: '🌤️ Warm',
-  new: '✨ New',
+  qualified_ready_for_call: '🔥 Hot Lead',
+  hot_lead: '🔥 Hot Lead',
+  hot: '🔥 Hot Lead',
+  qualified_missing_call_time: '📞 Qualified Lead',
+  qualified: '📞 Qualified Lead',
+  warm_missing_contact_details: '📇 No Details Lead',
+  warm_missing_contact: '📵 No Contact Lead',
+  warm_lead: '🌤️ Warm Lead',
+  warm: '🌤️ Warm Lead',
+  new: '✨ New Lead',
 };
 
 function formatLeadStatus(status) {
