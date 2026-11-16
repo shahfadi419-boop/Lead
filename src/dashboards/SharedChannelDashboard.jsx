@@ -200,10 +200,10 @@ function LeadsTable({ data, loading, label }) {
   );
 }
 
-function LiveExperienceLink({ label, href, platform }) {
+function LiveExperienceLink({ label, href, platform, displayPhoneNumber, linkText }) {
   const isWhatsApp = platform === 'whatsapp';
   const text = isWhatsApp
-    ? 'WhatsApp Experience Center'
+    ? linkText || 'WhatsApp Experience Center'
     : 'Facebook Experience Center';
 
   return (
@@ -226,7 +226,12 @@ function LiveExperienceLink({ label, href, platform }) {
       >
         {isWhatsApp ? 'W' : 'f'}
       </span>
-      <span className="whitespace-nowrap">{text}</span>
+      <span className="flex flex-col items-center whitespace-nowrap leading-tight">
+        <span>{text}</span>
+        {displayPhoneNumber && (
+          <span className="mt-1 text-sm font-semibold">{displayPhoneNumber}</span>
+        )}
+      </span>
       <ExternalLink size={18} className="shrink-0" aria-hidden="true" />
     </a>
   );
@@ -495,7 +500,9 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
   };
 
   const title = PLATFORM_LABELS[platform];
-  const whatsappNumber = (import.meta.env.VITE_WHATSAPP_NUMBER || '').replace(/\D/g, '');
+  const whatsappNumber = (
+    import.meta.env.VITE_WHATSAPP_NUMBER || '923099104811'
+  ).replace(/\D/g, '');
   const whatsappLiveExperienceUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}` : null;
   const dashboardViews = [
     { id: 'visa', label: 'Visa' },
@@ -549,11 +556,22 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
           {platform === 'facebook' && (
             <>
               {activeView === 'visa' && (
-                <LiveExperienceLink
-                  label="Visa"
-                  href="https://www.facebook.com/messages/t/1416240811568711"
-                  platform="facebook"
-                />
+                <>
+                  <LiveExperienceLink
+                    label="Visa"
+                    href="https://www.facebook.com/messages/t/1416240811568711"
+                    platform="facebook"
+                  />
+                  {whatsappLiveExperienceUrl && (
+                    <LiveExperienceLink
+                      label="WhatsApp Business"
+                      href={whatsappLiveExperienceUrl}
+                      platform="whatsapp"
+                      displayPhoneNumber="+92 309 9104811"
+                      linkText="Click for live experience"
+                    />
+                  )}
+                </>
               )}
               {activeView === 'realEstate' && (
                 <LiveExperienceLink
