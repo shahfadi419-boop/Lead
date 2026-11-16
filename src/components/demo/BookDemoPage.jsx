@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRight, CalendarDays, Check, CheckCircle2, Clock3, LockKeyhole, MessageSquareText, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
 import { analytics } from '../../services/analytics';
 
@@ -12,6 +12,13 @@ const DEMO_POINTS = [
 
 export function BookDemoPage({ onNavigate }) {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState('');
+  const [captchaStatus, setCaptchaStatus] = useState('loading');
+  const [formError, setFormError] = useState('');
+  const captchaContainer = useRef(null);
+  const captchaWidget = useRef(null);
+  const captchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY?.trim();
   const [formData, setFormData] = useState({
     name: '', email: '', phone: '', company: '', industry: 'Real Estate',
     volume: '500 - 2,500 conversations/mo', primaryChannel: 'All Channels', notes: '',
@@ -19,11 +26,133 @@ export function BookDemoPage({ onNavigate }) {
 
   const updateField = (field) => (event) => setFormData((current) => ({ ...current, [field]: event.target.value }));
 
-  const handleSubmit = (event) => {
+  useEffect(() => {
+    if (!captchaSiteKey) {
+      setCaptchaStatus('unconfigured');
+      return undefined;
+    }
+
+    let disposed = false;
+    const renderCaptcha = () => {
+      const recaptcha = window.grecaptcha;
+      if (!recaptcha || !captchaContainer.current || captchaWidget.current !== null) return;
+
+      recaptcha.ready(() => {
+        if (disposed || !captchaContainer.current || captchaWidget.current !== null) return;
+        try {
+          captchaWidget.current = recaptcha.render(captchaContainer.current, {
+            sitekey: captchaSiteKey,
+            callback: (token) => {
+              setCaptchaToken(token);
+              setFormError('');
+              setCaptchaStatus('ready');
+            },
+            'expired-callback': () => {
+              setCaptchaToken('');
+              setFormError('reCAPTCHA expired. Please complete it again.');
+            },
+            'error-callback': () => {
+              setCaptchaToken('');
+              setFormError('reCAPTCHA could not be verified. Please try again.');
+            },
+          });
+          setCaptchaStatus('ready');
+        } catch (error) {
+          console.error('Could not render the reCAPTCHA widget', error);
+          setCaptchaStatus('error');
+        }
+      });
+    };
+
+    let script = document.getElementById('google-recaptcha-script');
+    const onScriptLoad = () => renderCaptcha();
+    const onScriptError = () => setCaptchaStatus('error');
+
+    if (window.grecaptcha) {
+      renderCaptcha();
+    } else if (script) {
+      script.addEventListener('load', onScriptLoad);
+      script.addEventListener('error', onScriptError);
+    } else {
+      script = document.createElement('script');
+      script.id = 'google-recaptcha-script';
+      script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
+      script.async = true;
+      script.defer = true;
+      script.addEventListener('load', onScriptLoad);
+      script.addEventListener('error', onScriptError);
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      disposed = true;
+      script?.removeEventListener('load', onScriptLoad);
+      script?.removeEventListener('error', onScriptError);
+    };
+  }, [captchaSiteKey]);
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    analytics.track('book_demo_clicked', { source: 'dedicated_book_demo_page', industry: formData.industry, company: formData.company, volume: formData.volume });
-    setSubmitted(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setFormError('');
+    if (!captchaToken) {
+      setFormError(captchaSiteKey
+        ? 'Please confirm that you are not a robot.'
+        : 'reCAPTCHA is not configured. Please contact the site administrator.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const requestBody = {
+        name: formData.name,
+        email: formData.email,
+        company: formData.company,
+        channels: formData.primaryChannel,
+        volume: formData.volume,
+        message: [
+          `Phone or WhatsApp: ${formData.phone}`,
+          `Industry: ${formData.industry}`,
+          formData.notes && `Challenge: ${formData.notes}`,
+        ].filter(Boolean).join('\n'),
+        recaptcha_token: captchaToken,
+      };
+      const endpoint = import.meta.env.DEV
+        ? '/youtube-api/api/contact.php'
+        : '/api/contact';
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+      const text = await response.text();
+      let result;
+      try {
+        result = text ? JSON.parse(text) : null;
+      } catch {
+        result = null;
+      }
+      if (!response.ok) {
+        const detail = typeof result?.detail === 'string'
+          ? result.detail
+          : Array.isArray(result?.detail)
+            ? result.detail.map((item) => item.msg).filter(Boolean).join(' ')
+            : '';
+        throw new Error(detail || 'Could not submit your demo request. Please try again.');
+      }
+      if (!result || typeof result.message !== 'string') {
+        throw new Error('The backend returned an invalid response. Please try again.');
+      }
+
+      analytics.track('book_demo_clicked', { source: 'dedicated_book_demo_page', industry: formData.industry, company: formData.company, volume: formData.volume });
+      setSubmitted(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Could not submit your demo request. Please try again.');
+      setCaptchaToken('');
+      if (captchaWidget.current !== null) window.grecaptcha?.reset(captchaWidget.current);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -104,8 +233,29 @@ export function BookDemoPage({ onNavigate }) {
               <Field label="Primary focus channels"><select value={formData.primaryChannel} onChange={updateField('primaryChannel')} className={FIELD_STYLE}><option>All Channels</option><option>WhatsApp Business</option><option>Facebook & Instagram</option><option>Website chat</option><option>YouTube & TikTok</option></select></Field>
               <Field label="What challenge would you like to solve?" hint="Optional"><textarea rows={3} value={formData.notes} onChange={updateField('notes')} placeholder="For example: We need faster replies on WhatsApp and better lead qualification before calls." className={`${FIELD_STYLE} resize-none`} /></Field>
 
+              <div className="space-y-2">
+                {captchaSiteKey ? (
+                  <>
+                    <div ref={captchaContainer} aria-label="I'm not a robot verification" />
+                    {captchaStatus === 'loading' && (
+                      <p className="text-xs text-slate-500">Loading reCAPTCHA…</p>
+                    )}
+                    {captchaStatus === 'error' && (
+                      <p role="alert" className="text-xs text-red-600">
+                        reCAPTCHA could not load. Check your connection and try again.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p role="alert" className="text-xs text-amber-700">
+                    reCAPTCHA is not configured yet. Add the site key to enable demo requests.
+                  </p>
+                )}
+                {formError && <p role="alert" className="text-sm text-red-600">{formError}</p>}
+              </div>
+
               <div className="pt-2">
-                <button type="submit" className="group flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3.5 text-sm font-bold text-white shadow-[0_14px_30px_-14px_rgba(43,191,221,0.85)] transition hover:-translate-y-0.5 hover:bg-brand-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-200"><CalendarDays className="h-4 w-4" /> Reserve my demo <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></button>
+                <button type="submit" disabled={submitting || captchaStatus === 'error'} className="group flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3.5 text-sm font-bold text-white shadow-[0_14px_30px_-14px_rgba(43,191,221,0.85)] transition hover:-translate-y-0.5 hover:bg-brand-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-200 disabled:cursor-not-allowed disabled:opacity-60"><CalendarDays className="h-4 w-4" /> {submitting ? 'Verifying…' : 'Reserve my demo'} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></button>
                 <p className="mt-4 flex items-center justify-center gap-2 text-center text-[11px] text-slate-500"><LockKeyhole className="h-3.5 w-3.5 text-cyan-600" /> Your details are used only to arrange this demo.</p>
               </div>
             </form>

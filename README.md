@@ -69,6 +69,9 @@ VITE_REAL_ESTATE_API_URL=http://localhost:8010
 
 # WhatsApp Business number — digits only or with country code, spaces/+ stripped automatically
 VITE_WHATSAPP_NUMBER=923001234567
+
+# Google reCAPTCHA v2 checkbox (public site key)
+VITE_RECAPTCHA_SITE_KEY=your_recaptcha_site_key
 ```
 
 In production (Vercel), set the backend base URLs for the serverless proxies:
@@ -80,6 +83,13 @@ In production (Vercel), set the backend base URLs for the serverless proxies:
 | `REAL_ESTATE_API_URL` (or `VITE_REAL_ESTATE_API_URL`) | Real Estate backend base URL |
 | `YOUTUBE_API_URL` (or `VITE_YOUTUBE_API_URL`) | YouTube backend base URL |
 | `VITE_WHATSAPP_NUMBER` | WhatsApp Business number for the experience link |
+| `VITE_RECAPTCHA_SITE_KEY` | Google reCAPTCHA v2 checkbox site key |
+
+Register the production hostname in the Google reCAPTCHA admin console using the
+reCAPTCHA v2 **“I'm not a robot” Checkbox** type. The demo form submits to the YouTube
+backend at `POST /api/contact.php`, which verifies the checkbox token. Configure the
+reCAPTCHA secret on that backend only; do not expose it in the frontend or Vercel
+environment variables.
 
 ## Build and deploy
 

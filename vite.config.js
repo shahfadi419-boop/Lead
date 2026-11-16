@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => {
   const facebookUrl   = env.VITE_FACEBOOK_API_URL    || visaUrl
   const whatsappUrl   = env.VITE_WHATSAPP_API_URL    || visaUrl
   const realEstateUrl = env.VITE_REAL_ESTATE_API_URL || 'http://localhost:8010'
+  const youtubeUrl    = env.VITE_YOUTUBE_API_URL     || 'http://localhost:8005'
   const configureTunnelProxy = (proxy) => {
     proxy.on('proxyReq', (proxyReq) => {
       proxyReq.setHeader('X-Tunnel-Skip-AntiPhishing-Page', 'true')
@@ -45,7 +46,7 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/real-estate-api/, ''),
         },
         '/youtube-api': {
-          target: 'https://8qgnw9pl-8005.inc1.devtunnels.ms',
+          target: youtubeUrl,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/youtube-api/, ''),
           configure: configureTunnelProxy,
