@@ -1,191 +1,171 @@
-import { Suspense, lazy, useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router";
-import MarketingApp from "@/features/marketing/MarketingApp";
-import { FlowWidget } from "./features/youtube/screens/FlowWidget";
-import { getAuthChannels, youtubeRequest } from "./features/youtube/api";
-import { FlowLoader } from "./features/youtube/components/FlowLoader";
-import { getVideoItems } from "./features/youtube/videoPayload";
+import React, { useState, useEffect } from 'react';
+import { Navbar } from './components/common/Navbar';
+import { Footer } from './components/common/Footer';
+import { Hero } from './components/home/Hero';
+import { ChannelGrid } from './components/home/ChannelGrid';
+import { OperatingModel } from './components/home/OperatingModel';
+import { LeadDashboardPreview } from './components/home/LeadDashboardPreview';
+import { HumanCenteredOutcome } from './components/home/HumanCenteredOutcome';
+import { FinalCTA } from './components/home/FinalCTA';
+import { ExperienceCentre } from './components/experience/ExperienceCentre';
+import { BookDemoPage } from './components/demo/BookDemoPage';
+import { PageLoader } from './components/common/PageLoader';
+import { SharedChannelDashboard } from './dashboards/SharedChannelDashboard';
+import { YouTubeDashboard } from './dashboards/YouTubeDashboard';
 
-const AUTH_RETURN_KEY = "leadhive.youtube.auth-return";
-const FLOW_CHANNEL_KEY = "leadhive.flow.channel";
-const FLOW_PROFILE_KEY = "leadhive.flow.profile";
-const FLOW_VIDEO_KEY = "leadhive.flow.video";
+export function App() {
+  const [activeRoute, setActiveRoute] = useState('home');
+  const [dashboardPlatform, setDashboardPlatform] = useState('facebook');
+  const [isLoading, setIsLoading] = useState(true);
+  // Booking modal removed; using dedicated booking page
 
-function readStoredChannelId() {
-  try {
-    return JSON.parse(localStorage.getItem(FLOW_CHANNEL_KEY))?.id || "";
-  } catch {
-    return "";
-  }
-}
-
-function getSavedPersona(payload) {
-  const profile = payload?.profile || payload || {};
-  const complete = Boolean(
-    typeof profile.business_name === "string" &&
-    profile.business_name.trim() &&
-    typeof profile.brand_tone === "string" &&
-    profile.brand_tone &&
-    typeof profile.services === "string" &&
-    profile.services.trim() &&
-    typeof profile.ai_rules === "string" &&
-    profile.ai_rules.trim(),
-  );
-  return complete ? profile : null;
-}
-
-async function restoreSavedWorkspace(channels) {
-  const storedChannelId = readStoredChannelId();
-  const candidates = [...channels].sort((a, b) => (
-    Number(b.youtube_channel_id === storedChannelId) -
-    Number(a.youtube_channel_id === storedChannelId)
-  ));
-
-  for (const rawChannel of candidates) {
-    const channelId = rawChannel.youtube_channel_id;
-    if (!channelId) continue;
-
-    try {
-      const profileResponse = await youtubeRequest(
-        `/business-profile/${encodeURIComponent(channelId)}`,
-      );
-      const profile = getSavedPersona(profileResponse);
-      if (!profile) continue;
-
-      const videosResponse = await youtubeRequest(
-        `/selection-videos/${encodeURIComponent(channelId)}?limit=5`,
-      );
-      const selectedVideo = getVideoItems(videosResponse).find(video => (
-        video.selected && video.youtube_video_id
-      ));
-      if (!selectedVideo) continue;
-
-      const channel = {
-        id: channelId,
-        name: rawChannel.channel_name || channelId,
-        thumbnail: rawChannel.channel_thumbnail_url || "",
-        subscribers: rawChannel.channel_subscribers,
-        views: rawChannel.channel_views,
-      };
-      const video = {
-        id: selectedVideo.youtube_video_id,
-        title: selectedVideo.title || "Untitled video",
-        description: selectedVideo.description || "",
-      };
-      localStorage.setItem(FLOW_CHANNEL_KEY, JSON.stringify(channel));
-      localStorage.setItem(FLOW_PROFILE_KEY, JSON.stringify(profile));
-      localStorage.setItem(FLOW_VIDEO_KEY, JSON.stringify(video));
-      return true;
-    } catch (error) {
-      if (error?.status === 404) continue;
-      console.error(`[Auth] Could not restore saved YouTube workspace for channel ${channelId}`, error);
-    }
-  }
-
-  return false;
-}
-
-const InteractiveDemo2 = lazy(() =>
-  import("./features/youtube/components/InteractiveDemo2").then((m) => ({
-    default: m.InteractiveDemo2,
-  })),
-);
-const DemoServiceSelection = lazy(() =>
-  import("./features/youtube/components/DemoServiceSelection").then((m) => ({
-    default: m.DemoServiceSelection,
-  })),
-);
-const RegisterClient = lazy(() =>
-  import("./features/facebook/RegisterClient").then((m) => ({
-    default: m.RegisterClient,
-  })),
-);
-const VisaDashboard = lazy(() =>
-  import("./features/facebook/visadashboard").then((m) => ({
-    default: m.VisaDashboard,
-  })),
-);
-const WhatsAppRegisterClient = lazy(() =>
-  import("./features/whatsapp/RegisterClient").then((m) => ({
-    default: m.WhatsAppRegisterClient,
-  })),
-);
-const WhatsAppDashboard = lazy(() =>
-  import("./features/whatsapp/dashboard").then((m) => ({
-    default: m.WhatsAppDashboard,
-  })),
-);
-const LegalPage = lazy(() =>
-  import("@/features/legal/LegalPage").then((m) => ({ default: m.LegalPage })),
-);
-const NotFound = lazy(() => import("@/NotFound"));
-
-function HomeRoute() {
-  const navigate = useNavigate();
-  const [checkingAuth, setCheckingAuth] = useState(
-    () => sessionStorage.getItem(AUTH_RETURN_KEY) === "pending",
-  );
-
+  // Sync route with URL hash or pathname
   useEffect(() => {
-    if (!checkingAuth) return;
-
-    let active = true;
-    getAuthChannels()
-      .then(async (channels) => {
-        if (!active) return;
-        const hasSavedWorkspace = Array.isArray(channels) &&
-          await restoreSavedWorkspace(channels);
-        if (!active) return;
-        sessionStorage.removeItem(AUTH_RETURN_KEY);
-        navigate(`/flow?step=${hasSavedWorkspace ? "2" : "1"}`, { replace: true });
-      })
-      .catch((error) => {
-        if (!active) return;
-        sessionStorage.removeItem(AUTH_RETURN_KEY);
-        if (error?.status !== 401) {
-          console.error("[Auth] Could not verify YouTube connection after sign-in", error);
+    const handleUrlChange = () => {
+      const path = window.location.pathname;
+      const hash = window.location.hash;
+      if (path === '/dashboard') {
+        const platform = new URLSearchParams(window.location.search).get('platform');
+        setDashboardPlatform(
+          platform === 'whatsapp' || platform === 'youtube' ? platform : 'facebook',
+        );
+        setActiveRoute('dashboard');
+      } else if (path === '/book-demo' || hash === '#book-demo') {
+        setActiveRoute('booking');
+      } else {
+        setActiveRoute('home');
+        const anchorId = hash === '#channels-section'
+          ? 'channels-section'
+          : path === '/experience' || hash === '#experience'
+            ? 'experience'
+            : null;
+        if (anchorId) {
+          window.setTimeout(() => document.getElementById(anchorId)?.scrollIntoView({ behavior: 'smooth' }), 100);
         }
-        setCheckingAuth(false);
-      });
-
-    return () => {
-      active = false;
+      }
     };
-  }, [checkingAuth, navigate]);
 
-  if (checkingAuth) return <FlowLoader message="Opening your YouTube channels..." />;
-  return <MarketingApp />;
-}
-
-function CpanelRedirect() {
-  useEffect(() => {
-    window.location.replace("https://core47.hostingmadeeasy.com:2083/");
+    handleUrlChange();
+    window.addEventListener('popstate', handleUrlChange);
+    window.addEventListener('hashchange', handleUrlChange);
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener('hashchange', handleUrlChange);
+    };
   }, []);
 
-  return null;
-}
+  // Update document title and URL when route changes
+  const handleNavigate = (route, platform) => {
+    setActiveRoute(route);
+    if (route === 'dashboard') {
+      const selectedPlatform = ['whatsapp', 'youtube'].includes(platform) ? platform : 'facebook';
+      setDashboardPlatform(selectedPlatform);
+      window.history.pushState(null, '', `/dashboard?platform=${selectedPlatform}`);
+      document.title = selectedPlatform === 'youtube'
+        ? 'YouTube Comment Dashboard'
+        : `${selectedPlatform === 'whatsapp' ? 'WhatsApp' : 'Facebook'} Lead Dashboard`;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (route === 'experience') {
+      setActiveRoute('home');
+      window.history.pushState(null, '', '#experience');
+      document.title = 'LeadHive AI: Autonomous Sales Intelligence Platform';
+      window.setTimeout(() => document.getElementById('experience')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    } else if (route === 'sandboxes') {
+      setActiveRoute('home');
+      window.history.pushState(null, '', '#channels-section');
+      document.title = 'LeadHive AI: Channel Sandboxes';
+      window.setTimeout(() => document.getElementById('channels-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    } else if (route === 'booking') {
+      window.history.pushState(null, '', '#book-demo');
+      document.title = 'Book a LeadHive AI Demo';
+    } else {
+      window.history.pushState(null, '', window.location.pathname === '/dashboard' ? '/' : '#');
+      document.title = 'LeadHive AI: Autonomous Sales Intelligence Platform';
+    }
+    if (route !== 'experience' && route !== 'sandboxes' && route !== 'dashboard') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
-export default function App() {
+  const handleOpenBooking = () => {
+    handleNavigate('booking');
+  };
+
+  if (activeRoute === 'dashboard') {
+    if (dashboardPlatform === 'youtube') {
+      return <YouTubeDashboard onNavigate={handleNavigate} />;
+    }
+
+    return (
+      <SharedChannelDashboard
+        platform={dashboardPlatform}
+        onNavigate={handleNavigate}
+      />
+    );
+  }
+
   return (
-    <BrowserRouter>
-      <Suspense fallback={null}>
-        <Routes>
-          <Route path="/" element={<HomeRoute />} />
-          <Route path="/contact" element={<MarketingApp />} />
-          <Route path="/test-demo" element={<DemoServiceSelection />} />
-          <Route path="/demo" element={<Navigate to="/test-demo" replace />} />
-          <Route path="/facebook" element={<RegisterClient />} />
-          <Route path="/visa/dashboard" element={<VisaDashboard />} />
-          <Route path="/whatsapp" element={<WhatsAppRegisterClient />} />
-          <Route path="/whatsapp/dashboard" element={<WhatsAppDashboard />} />
-          <Route path="/flow" element={<FlowWidget />} />
-          <Route path="/interactive-demo-2" element={<InteractiveDemo2 />} />
-          <Route path="/privacy" element={<LegalPage type="privacy" />} />
-          <Route path="/terms" element={<LegalPage type="terms" />} />
-          <Route path="/cpanel" element={<CpanelRedirect />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Suspense>
-    </BrowserRouter>
+    <div className="min-h-screen bg-white text-slate-900 font-sans flex flex-col selection:bg-brand-500 selection:text-white">
+      {isLoading && <PageLoader onComplete={() => setIsLoading(false)} />}
+
+      {/* Top Navigation */}
+      <Navbar
+        activeRoute={activeRoute}
+        onNavigate={handleNavigate}
+        onOpenBooking={handleOpenBooking}
+      />
+
+      {/* Main Content View */}
+      <main className="flex-1">
+        {activeRoute === 'home' ? (
+          <div>
+            {/* Section 01: Hero */}
+            <Hero onNavigate={handleNavigate} />
+
+            {/* Section 02: One Intelligence. Every Channel. */}
+            <ChannelGrid
+              onNavigate={handleNavigate}
+            />
+
+            {/* Section 03: From Conversation to Conversion */}
+            <OperatingModel
+              onNavigate={handleNavigate}
+            />
+
+            {/* Section 04: Know Which Leads Matter */}
+            <LeadDashboardPreview
+              onNavigate={handleNavigate}
+            />
+
+            {/* Section 05: Your Team Focuses on Closing */}
+            <HumanCenteredOutcome
+              onNavigate={handleNavigate}
+              onOpenBooking={handleOpenBooking}
+            />
+
+            {/* Section 06: Full Interactive Experience Centre */}
+            <ExperienceCentre
+              onOpenBooking={handleOpenBooking}
+              onBackToHome={() => handleNavigate('home')}
+            />
+
+            {/* Section 08: Final CTA, immediately before the footer */}
+            <FinalCTA
+              onNavigate={handleNavigate}
+              onOpenBooking={handleOpenBooking}
+            />
+          </div>
+        ) : (
+          /* Dedicated Booking Page */
+          <BookDemoPage onNavigate={handleNavigate} />
+        )}
+      </main>
+
+      {/* Global Footer */}
+      <Footer onNavigate={handleNavigate} />
+
+    </div>
   );
 }
+
+export default App;
