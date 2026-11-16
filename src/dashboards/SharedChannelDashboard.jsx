@@ -453,7 +453,10 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
   useEffect(() => {
     if (!isVisaSource) return;
     const dashboardKey = source === 'facebook' ? 'visa' : 'whatsapp';
-    const es = new EventSource(`/visa-api/dashboard/stream?platform=${source}`);
+    const visaStreamUrl = import.meta.env.DEV
+      ? `/visa-sse/dashboard/stream?platform=${source}`
+      : `/api/visa-stream?platform=${source}`;
+    const es = new EventSource(visaStreamUrl);
 
     es.onmessage = (event) => {
       try {
@@ -474,7 +477,10 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
   // SSE live updates — real estate source
   useEffect(() => {
     if (source !== 'real-estate') return;
-    const es = new EventSource('/real-estate-api/estate/dashboard/stream');
+    const realEstateStreamUrl = import.meta.env.DEV
+      ? '/real-estate-sse/estate/dashboard/stream'
+      : '/api/real-estate-stream';
+    const es = new EventSource(realEstateStreamUrl);
 
     es.onmessage = (event) => {
       try {

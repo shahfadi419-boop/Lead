@@ -8,6 +8,8 @@ export default defineConfig(({ mode }) => {
   const facebookUrl   = env.VITE_FACEBOOK_API_URL    || visaUrl
   const whatsappUrl   = env.VITE_WHATSAPP_API_URL    || visaUrl
   const realEstateUrl = env.VITE_REAL_ESTATE_API_URL || 'http://localhost:8010'
+  const visaSseUrl    = env.VITE_VISA_SSE_BASE       || visaUrl
+  const realEstateSseUrl = env.VITE_REAL_ESTATE_SSE_BASE || realEstateUrl
   const youtubeUrl    = env.VITE_YOUTUBE_API_URL     || 'http://localhost:8005'
   const configureTunnelProxy = (proxy) => {
     proxy.on('proxyReq', (proxyReq) => {
@@ -40,10 +42,22 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/visa-api/, ''),
           configure: configureTunnelProxy,
         },
+        '/visa-sse': {
+          target: visaSseUrl,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/visa-sse/, ''),
+          configure: configureTunnelProxy,
+        },
         '/real-estate-api': {
           target: realEstateUrl,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/real-estate-api/, ''),
+        },
+        '/real-estate-sse': {
+          target: realEstateSseUrl,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/real-estate-sse/, ''),
+          configure: configureTunnelProxy,
         },
         '/youtube-api': {
           target: youtubeUrl,

@@ -66,6 +66,8 @@ VITE_VISA_API_URL=http://localhost:8000
 VITE_FACEBOOK_API_URL=http://localhost:8000
 VITE_WHATSAPP_API_URL=http://localhost:8000
 VITE_REAL_ESTATE_API_URL=http://localhost:8010
+VITE_VISA_SSE_BASE=http://localhost:8000
+VITE_REAL_ESTATE_SSE_BASE=http://localhost:8010
 
 # WhatsApp Business number — digits only or with country code, spaces/+ stripped automatically
 VITE_WHATSAPP_NUMBER=923001234567
@@ -78,12 +80,19 @@ In production (Vercel), set the backend base URLs for the serverless proxies:
 
 | Variable | Purpose |
 |---|---|
-| `FACEBOOK_API_URL` (or `VITE_FACEBOOK_API_URL`) | Facebook and Visa backend base URL |
+| `FACEBOOK_API_URL`, `VITE_FACEBOOK_API_URL`, or `VITE_VISA_API_URL` | Facebook and Visa backend base URL |
 | `WHATSAPP_API_URL` (or `VITE_WHATSAPP_API_URL`) | WhatsApp backend base URL |
 | `REAL_ESTATE_API_URL` (or `VITE_REAL_ESTATE_API_URL`) | Real Estate backend base URL |
+| `VITE_VISA_SSE_BASE` | Visa/WhatsApp backend base URL for live updates |
+| `VITE_REAL_ESTATE_SSE_BASE` | Real Estate backend base URL for live updates |
 | `YOUTUBE_API_URL` (or `VITE_YOUTUBE_API_URL`) | YouTube backend base URL |
 | `VITE_WHATSAPP_NUMBER` | WhatsApp Business number for the experience link |
 | `VITE_RECAPTCHA_SITE_KEY` | Google reCAPTCHA v2 checkbox site key |
+
+Keep the existing API URL variables. Set the two SSE base variables to the same
+backend hosts as Visa and Real Estate respectively, in Vercel as well as local
+`.env` configuration, then redeploy. Live updates use same-origin Vercel streaming
+proxies in production and the Vite SSE proxies in local development.
 
 Register the production hostname in the Google reCAPTCHA admin console using the
 reCAPTCHA v2 **“I'm not a robot” Checkbox** type. The demo form submits to the YouTube

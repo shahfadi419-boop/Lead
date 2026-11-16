@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, ExternalLink, Play, RefreshCw } from 'lucide-react';
 import { getYouTubePinnedAnalytics } from './api';
 
-const LIVE_EXPERIENCE_URL = 'https://lead-old-draft.vercel.app/flow?step=1';
+const LIVE_EXPERIENCE_URL = 'https://www.youtube.com/watch?v=DYdVbE-c8co';
+const INTERACTIVE_DEMO_URL = 'https://lead-old-draft.vercel.app/interactive-demo-2';
 
 function formatNumber(value) {
   return typeof value === 'number' && Number.isFinite(value)
@@ -86,20 +87,47 @@ export function YouTubeDashboard({ onNavigate }) {
           </button>
         </header>
 
-        <section aria-label="YouTube live experience" className="flex min-h-14 items-center">
-          <a
-            href={LIVE_EXPERIENCE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Open YouTube Experience Center"
-            className="inline-flex min-h-14 w-[420px] max-w-full items-center justify-center gap-3 rounded-xl border-2 border-[#FF0000] bg-[#FF0000] px-5 py-3 text-center text-base font-bold text-white shadow-md transition hover:-translate-y-0.5 hover:border-[#CC0000] hover:bg-[#CC0000] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
-          >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-white">
-              <Play className="h-4 w-4 fill-current" aria-hidden="true" />
-            </span>
-            <span className="whitespace-nowrap">YouTube Experience Center</span>
-            <ExternalLink size={18} className="shrink-0" aria-hidden="true" />
-          </a>
+        <section aria-label="YouTube live experiences" className="flex flex-wrap gap-4">
+          <div className="w-[420px] max-w-full space-y-2">
+            <a
+              href={LIVE_EXPERIENCE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Try the YouTube comment and reply demo"
+              className="inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-xl border-2 border-[#FF0000] bg-[#FF0000] px-5 py-3 text-center text-base font-bold text-white shadow-md transition hover:-translate-y-0.5 hover:border-[#CC0000] hover:bg-[#CC0000] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-white">
+                <Play className="h-4 w-4 fill-current" aria-hidden="true" />
+              </span>
+              <span className="whitespace-nowrap">Try YouTube Comment &amp; Reply</span>
+              <ExternalLink size={18} className="shrink-0" aria-hidden="true" />
+            </a>
+            <p className="px-1 text-sm leading-relaxed text-slate-600">
+              Leave a comment on YouTube, then see how many comments still need a reply:{' '}
+              <span className="font-semibold text-slate-900">
+                {loading ? 'Loading…' : error ? 'Unavailable' : unansweredCount.toLocaleString()}
+              </span>
+              .
+            </p>
+          </div>
+          <div className="w-[420px] max-w-full space-y-2">
+            <a
+              href={INTERACTIVE_DEMO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="View the LeadHive process interactive demo"
+              className="inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-xl border-2 border-[#FF0000] bg-[#FF0000] px-5 py-3 text-center text-base font-bold text-white shadow-md transition hover:-translate-y-0.5 hover:border-[#CC0000] hover:bg-[#CC0000] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-white">
+                <Play className="h-4 w-4 fill-current" aria-hidden="true" />
+              </span>
+              <span className="whitespace-nowrap">View LeadHive Process Interactive Demo</span>
+              <ExternalLink size={18} className="shrink-0" aria-hidden="true" />
+            </a>
+            <p className="px-1 text-sm leading-relaxed text-slate-600">
+              Take a quick look at how LeadHive handles a channel’s video comments, step by step.
+            </p>
+          </div>
         </section>
 
         {error && (

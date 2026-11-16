@@ -4,6 +4,7 @@ export default function handler(req, res) {
   return proxyBackend(req, res, {
     envName: 'FACEBOOK_API_URL',
     fallbackEnvName: 'VITE_FACEBOOK_API_URL',
+    fallbackEnvNames: ['VITE_VISA_API_URL'],
     endpoints: PLATFORM_ENDPOINTS,
   });
 }
