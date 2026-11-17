@@ -4,7 +4,6 @@ import { getYouTubePinnedAnalytics } from './api';
 
 const LIVE_EXPERIENCE_URL = 'https://www.youtube.com/watch?v=DYdVbE-c8co';
 const INTERACTIVE_DEMO_URL = 'https://lead-old-draft.vercel.app/interactive-demo-2';
-const AUTO_REPLIES_URL = 'https://lead-old-draft.vercel.app/flow?step=1';
 
 function formatNumber(value) {
   return typeof value === 'number' && Number.isFinite(value)
@@ -21,11 +20,11 @@ function Skeleton({ className = '' }) {
   );
 }
 
-function YouTubeMark() {
+function YouTubeMark({ className = 'h-5 w-5' }) {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
       <path
-        fill="currentColor"
+        fill="#FF0000"
         d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8Z"
       />
       <path fill="white" d="m9.6 15.6 6.2-3.6-6.2-3.6z" />
@@ -46,11 +45,97 @@ function StatsCard({ label, value, loading, bordered = false }) {
   );
 }
 
+function YouTubeSetupPage() {
+  const [connectError, setConnectError] = useState('');
+
+  return (
+    <main className="min-h-screen bg-[#f7f8fa] text-slate-800">
+      <header className="h-[62px] border-b border-slate-200 bg-white">
+        <div className="mx-auto flex h-full max-w-[1056px] items-center gap-3 px-4 sm:px-0">
+          <img src="/leadhive-logo.png" alt="LeadHive AI" className="h-7 w-auto object-contain" />
+          <span className="h-6 border-l border-slate-200" aria-hidden="true" />
+          <span className="flex items-center gap-2 text-[13px] font-bold text-slate-800">
+            <span className="flex h-4 w-6 items-center justify-center">
+              <YouTubeMark className="h-3 w-4" />
+            </span>
+            YouTube Intelligence
+          </span>
+          <span className="ml-auto inline-flex items-center gap-1.5 text-[13px] font-bold text-slate-800">
+            <span className="flex h-3.5 w-4 items-center justify-center rounded-[3px] bg-slate-800 text-white">
+              <Play className="h-2 w-2 fill-current" aria-hidden="true" />
+            </span>
+            Interactive Demo
+          </span>
+        </div>
+      </header>
+
+      <section className="px-4 pb-12 pt-6 sm:px-6">
+        <div className="mx-auto max-w-[766px] text-center">
+          <h1 className="text-[26px] font-bold leading-8 tracking-tight text-[#1f332d]">What LeadHive does</h1>
+          <p className="mt-1 text-[13px] leading-5 text-slate-500">
+            LeadHive helps you track video performance and reply to comments with AI in your brand&apos;s voice.
+          </p>
+
+          <div className="mt-9 rounded-2xl border border-slate-200 bg-white px-5 py-7 text-left shadow-sm sm:px-7 sm:py-7">
+            <div className="mx-auto max-w-xl text-center">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-[10px] font-medium text-blue-600">
+                <span aria-hidden="true">↗</span>
+                Secure Google sign-in
+              </span>
+              <h2 className="mt-1 text-[21px] font-bold leading-7 text-[#1f332d]">Connect YouTube Channel</h2>
+              <button
+                type="button"
+                onClick={() => setConnectError('Google sign-in is not configured for this dashboard yet.')}
+                className="mt-3 inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+              >
+                <span className="flex h-4 w-5 items-center justify-center">
+                  <YouTubeMark className="h-3 w-4" />
+                </span>
+                Connect YouTube
+              </button>
+              <p className="mt-1 text-[10px] leading-[15px] text-slate-500">
+                Connect your channel to explore video insights and AI-powered comment replies.
+                <br />
+                You can review how we use your data in our <span className="font-medium text-sky-600">Privacy Policy</span>.
+              </p>
+              {connectError && (
+                <p role="alert" className="mt-3 text-xs font-medium text-amber-700">{connectError}</p>
+              )}
+            </div>
+
+            <div className="mt-5 border-t border-slate-100 pt-3">
+              <h3 className="text-[12px] font-bold text-[#33423c]">Getting started</h3>
+              <ol className="mt-2.5 grid gap-2 sm:grid-cols-3">
+                {[
+                  ['1', 'Connect your account', 'Sign in securely with Google.'],
+                  ['2', 'Choose a channel', 'Select the YouTube channel you want to manage.'],
+                  ['3', 'Set up AI replies', 'Choose how AI should respond to your audience.'],
+                ].map(([step, title, description]) => (
+                  <li key={step} className="flex min-h-[76px] gap-2.5 rounded-xl border border-slate-100 bg-[#f8f9fa] p-2.5">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[10px] font-bold text-blue-600">
+                      {step}
+                    </span>
+                    <span>
+                      <span className="block text-[11px] font-bold text-slate-800">{title}</span>
+                      <span className="mt-0.5 block text-[10px] leading-[15px] text-slate-500">{description}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 export function YouTubeDashboard({ onNavigate }) {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showYouTubeSetup, setShowYouTubeSetup] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -75,6 +160,10 @@ export function YouTubeDashboard({ onNavigate }) {
   const unansweredCount = Array.isArray(analytics?.unanswered_comments)
     ? analytics.unanswered_comments.length
     : 0;
+
+  if (showYouTubeSetup) {
+    return <YouTubeSetupPage />;
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 sm:px-6 sm:py-8">
@@ -156,19 +245,17 @@ export function YouTubeDashboard({ onNavigate }) {
             </p>
           </div>
           <div className="min-w-0">
-            <a
-              href={AUTO_REPLIES_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Open AI Auto Replies demo"
+            <button
+              type="button"
+              onClick={() => setShowYouTubeSetup(true)}
+              aria-label="Open AI Auto Replies setup"
               className="relative inline-flex h-14 w-full items-center justify-center gap-3 rounded-xl border border-[#D90000] bg-[#FF0000] px-4 py-3 text-center text-base font-extrabold text-white shadow-md shadow-red-200/70 transition hover:-translate-y-0.5 hover:border-[#B80000] hover:bg-[#E60000] hover:shadow-lg hover:shadow-red-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 sm:px-6"
             >
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#FF0000] shadow-sm">
                 <YouTubeMark />
               </span>
               <span>AI Auto Replies</span>
-              <ExternalLink size={18} className="shrink-0" aria-hidden="true" />
-            </a>
+            </button>
             <p className="mt-2 min-h-10 text-sm leading-5 text-slate-600">
               Let AI understand your business and video context to generate personalized, relevant replies to your audience.
             </p>
