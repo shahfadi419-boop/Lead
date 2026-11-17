@@ -71,6 +71,7 @@ export default async function handler(req, res) {
         Accept: 'application/json',
         'Content-Type': 'application/json',
         'X-Tunnel-Skip-AntiPhishing-Page': 'true',
+        'ngrok-skip-browser-warning': 'true',
       },
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(20000),

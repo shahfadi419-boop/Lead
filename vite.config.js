@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
   const configureTunnelProxy = (proxy) => {
     proxy.on('proxyReq', (proxyReq) => {
       proxyReq.setHeader('X-Tunnel-Skip-AntiPhishing-Page', 'true')
+      proxyReq.setHeader('ngrok-skip-browser-warning', 'true')
     })
   }
 

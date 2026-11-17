@@ -45,7 +45,7 @@ function StatsCard({ label, value, loading, bordered = false }) {
   );
 }
 
-function YouTubeSetupPage() {
+function YouTubeSetupPage({ onBookDemo }) {
   const [connectError, setConnectError] = useState('');
 
   return (
@@ -99,7 +99,17 @@ function YouTubeSetupPage() {
                 You can review how we use your data in our <span className="font-medium text-sky-600">Privacy Policy</span>.
               </p>
               {connectError && (
-                <p role="alert" className="mt-3 text-xs font-medium text-amber-700">{connectError}</p>
+                <p role="alert" className="mt-3 text-xs leading-5 text-amber-800">
+                  Google sign-in isn&apos;t ready just yet. Want to get started?{' '}
+                  <button
+                    type="button"
+                    onClick={onBookDemo}
+                    className="font-bold text-sky-700 underline decoration-sky-300 underline-offset-2 transition hover:text-sky-900"
+                  >
+                    Book a demo
+                  </button>
+                  {' '}and the LeadHive team will help you connect your channel.
+                </p>
               )}
             </div>
 
@@ -162,7 +172,7 @@ export function YouTubeDashboard({ onNavigate }) {
     : 0;
 
   if (showYouTubeSetup) {
-    return <YouTubeSetupPage />;
+    return <YouTubeSetupPage onBookDemo={() => onNavigate('booking')} />;
   }
 
   return (
