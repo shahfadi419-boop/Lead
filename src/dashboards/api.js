@@ -104,6 +104,19 @@ export function getYouTubePinnedAnalytics(options) {
   });
 }
 
+// --- Visa extraction trigger ---
+
+export async function triggerVisaExtraction(options = {}) {
+  const url = import.meta.env.DEV ? '/visa-api/extract' : '/api/visa-extract';
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { Accept: 'application/json' },
+    signal: options.signal,
+  });
+  if (!response.ok) throw new Error(`Extraction trigger failed (${response.status})`);
+  return response.json();
+}
+
 // --- Visa backend (ai-lead-generator on port 8000) ---
 
 async function visaRequest(platform, endpoint, options = {}) {

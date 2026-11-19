@@ -7,6 +7,7 @@ import {
   getPlatformEngagement,
   getPlatformLeads,
   getPlatformStats,
+  triggerVisaExtraction,
 } from './api';
 
 const EMPTY_SOURCE = {
@@ -551,6 +552,12 @@ export function SharedChannelDashboard({ platform, onNavigate }) {
     setLoading(true);
     loadedSources.current.delete(source);
     try {
+      if (isVisaSource) {
+        // Fire extraction and give Celery ~3s to process before re-fetching
+        await triggerVisaExtraction({ signal: controller.signal }).catch(() => {});
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        if (controller.signal.aborted) return;
+      }
       await loadSource(source, controller.signal, true);
     } finally {
       if (controller.signal.aborted) return;
