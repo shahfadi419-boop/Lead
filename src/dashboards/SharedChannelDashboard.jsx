@@ -41,6 +41,7 @@ function formatCell(value) {
   return String(value);
 }
 
+
 const LEAD_STATUS_LABELS = {
   qualified_ready_for_call: '🔥 Hot Lead',
   hot_lead: '🔥 Hot Lead',
@@ -164,6 +165,7 @@ function LeadsTable({ data, loading, label }) {
       { label: 'Preferred Call Time', value: (lead) => lead.preferred_call_time },
       { label: 'Platform', value: (lead) => lead.platform },
       { label: 'Status', value: (lead) => formatLeadStatus(lead.stage) },
+      { label: 'Summary', value: (lead) => lead.summary || '—' },
     ]
     : label === 'Visa'
       ? [
@@ -173,6 +175,7 @@ function LeadsTable({ data, loading, label }) {
         { label: 'Preferred Call Time', value: (lead) => lead.preferred_calling_time || lead.preferred_call_time },
         { label: 'Platform', value: (lead) => lead.platform },
         { label: 'Status', value: (lead) => formatLeadStatus(lead.lead_status || lead.stage) },
+        { label: 'Summary', value: (lead) => lead.summary || '—' },
       ]
       : [
         ...sharedColumns,
