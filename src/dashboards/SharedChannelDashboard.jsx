@@ -41,6 +41,29 @@ function formatCell(value) {
   return String(value);
 }
 
+function formatSummary(value) {
+  if (value === null || value === undefined || value === '') return '—';
+
+  const text = String(value)
+    .replace(/^\s*-\s+/gm, '')
+    .replace(/\n{3,}/g, '\n\n');
+  return text
+    .split(/(\*\*[^*]+\*\*|\*[^*]+\*|\r?\n)/g)
+    .map((part, index) => {
+      if (!part) return null;
+      if (part === '\n' || part === '\r\n') {
+        return <br key={`line-${index}`} />;
+      }
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={`bold-${index}`} className="font-bold text-slate-900">{part.slice(2, -2)}</strong>;
+      }
+      if (part.startsWith('*') && part.endsWith('*')) {
+        return <strong key={`bold-${index}`} className="font-bold text-slate-900">{part.slice(1, -1)}</strong>;
+      }
+      return part;
+    });
+}
+
 
 const LEAD_STATUS_LABELS = {
   qualified_ready_for_call: '🔥 Hot Lead',
@@ -184,6 +207,7 @@ function LeadsTable({ data, loading, label }) {
         { label: 'Preferred Call Time', value: (lead) => lead.preferred_calling_time || lead.preferred_call_time },
         { label: 'Platform', value: (lead) => lead.platform },
         { label: 'Status', value: (lead) => formatLeadStatus(lead.lead_status || lead.stage) },
+        { label: 'Summary', value: (lead) => lead.summary || '—', render: formatSummary },
       ];
   const columns = [
     ...sourceColumns,
@@ -199,14 +223,14 @@ function LeadsTable({ data, loading, label }) {
         </span>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[850px] border-collapse text-center">
+        <table className="w-full min-w-[1150px] border-collapse text-center">
           <thead>
             <tr className="border-b border-slate-200">
               {columns.map(({ label: columnLabel }) => (
                 <th
                   key={columnLabel}
                   scope="col"
-                  className="whitespace-nowrap border-r border-slate-200 px-4 py-3 text-[11px] font-extrabold uppercase tracking-[0.12em] text-slate-700 last:border-r-0"
+                  className="whitespace-nowrap border-r border-slate-300 px-4 py-3 text-[11px] font-extrabold uppercase tracking-[0.12em] text-slate-700 last:border-r-0"
                 >
                   {columnLabel}
                 </th>
@@ -217,14 +241,20 @@ function LeadsTable({ data, loading, label }) {
             {leads.length ? leads.map((lead, index) => (
               <tr
                 key={lead.thread_id || lead.id || `${label}-${index}`}
-                className="border-b border-slate-100 last:border-0"
+                className="border-b border-slate-300 last:border-0"
               >
                 {columns.map(({ label: columnLabel, value }) => (
                   <td
                     key={columnLabel}
-                    className="whitespace-nowrap border-r border-slate-100 px-4 py-3 text-sm text-slate-600 last:border-r-0"
+                    className={
+                      columnLabel === 'Summary'
+                        ? 'w-[360px] min-w-[360px] max-w-[360px] whitespace-normal border-r border-slate-300 px-4 py-3 text-left align-top text-sm leading-6 text-slate-600 last:border-r-0'
+                        : 'whitespace-nowrap border-r border-slate-300 px-4 py-3 text-sm text-slate-600 last:border-r-0'
+                    }
                   >
-                    {formatCell(value(lead))}
+                    {columnLabel === 'Summary'
+                      ? formatSummary(value(lead))
+                      : formatCell(value(lead))}
                   </td>
                 ))}
               </tr>
