@@ -45,23 +45,16 @@ function formatSummary(value) {
   if (value === null || value === undefined || value === '') return '—';
 
   const text = String(value)
-    .replace(/^\s*-\s+/gm, '')
+    .replace(/^\s*-\s*/gm, '')
+    .replace(/\*/g, '')
     .replace(/\n{3,}/g, '\n\n');
-  return text
-    .split(/(\*\*[^*]+\*\*|\*[^*]+\*|\r?\n)/g)
-    .map((part, index) => {
-      if (!part) return null;
-      if (part === '\n' || part === '\r\n') {
-        return <br key={`line-${index}`} />;
-      }
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={`bold-${index}`} className="font-bold text-slate-900">{part.slice(2, -2)}</strong>;
-      }
-      if (part.startsWith('*') && part.endsWith('*')) {
-        return <strong key={`bold-${index}`} className="font-bold text-slate-900">{part.slice(1, -1)}</strong>;
-      }
-      return part;
-    });
+  const lines = text.split(/\r?\n/);
+  return lines.map((line, index) => (
+    <span key={`line-${index}`}>
+      {line}
+      {index < lines.length - 1 && <br />}
+    </span>
+  ));
 }
 
 
